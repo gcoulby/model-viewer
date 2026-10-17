@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="orders" nsURI="http://example.org/shop/orders/1.0" nsPrefix="ord">
+  <eClassifiers xsi:type="ecore:EClass" name="Customer" eSuperTypes="core.ecore#//Entity">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="billingAddress" eType="core.ecore#//Address" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="orders" upperBound="-1" eType="#//Order" containment="true" eOpposite="#//Order/customer"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Order" eSuperTypes="core.ecore#//Entity">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="currency" eType="core.ecore#//Currency"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="customer" lowerBound="1" eType="#//Customer" eOpposite="#//Customer/orders"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="lines" upperBound="-1" eType="#//OrderLine" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="shippingAddress" eType="core.ecore#//Address" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="total" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble" changeable="false" volatile="true" transient="true" derived="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="OrderLine">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="quantity" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="1"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="unitPrice" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+  </eClassifiers>
+</ecore:EPackage>

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { loadSampleText } from '@/data/loadSample'
+import { SAMPLES } from '@/data/samples'
 import { buildGraph } from '../buildGraph'
 import { parseModel } from '../parse'
 import type { ClassGraphNode, FeatureGraphEdge } from '@/types/graph'
 
-const sample = () => parseModel(loadSampleText(), 'library.ecore', 0)
+const sample = () => parseModel(SAMPLES[0]!.files[0]!.text, 'library.ecore', 0)
 
 function byName(graph: ReturnType<typeof buildGraph>, name: string) {
   return [...graph.nodes.values()].find((n) => n.name === name)

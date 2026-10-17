@@ -1,6 +1,6 @@
 import type { ViewOptions } from '@/types/view'
 
-export type ToggleOptionKey = Exclude<keyof ViewOptions, 'direction'>
+export type ToggleOptionKey = Exclude<keyof ViewOptions, 'direction' | 'layoutMode' | 'spacing'>
 
 export interface ViewOptionDefinition {
   key: ToggleOptionKey

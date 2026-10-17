@@ -54,7 +54,14 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     if (!visible || !fontsReady) return null
     const geometry = new Map<string, NodeGeometry>()
     for (const node of visible.nodes) geometry.set(node.id, computeGeometry(node, options, false, measure))
-    const positions = layoutNodes(visible.nodes, visible.edges, geometry, options.direction)
+    const positions = layoutNodes(
+      visible.nodes,
+      visible.edges,
+      geometry,
+      options.direction,
+      options.layoutMode,
+      options.spacing,
+    )
     return { positions, geometry }
   }, [visible, options, fontsReady, measure, relayoutCount])
 

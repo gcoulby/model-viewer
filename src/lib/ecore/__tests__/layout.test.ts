@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { VIEW_OPTIONS } from '@/data/viewOptions'
-import { loadSampleText } from '@/data/loadSample'
+import { VIEW_OPTIONS, type ToggleOptionKey } from '@/data/viewOptions'
+import { SAMPLES } from '@/data/samples'
 import type { ClassGraphNode, GraphNode } from '@/types/graph'
 import type { NodeGeometry, ViewOptions } from '@/types/view'
 import { buildGraph } from '../buildGraph'
@@ -12,12 +12,14 @@ import { parseModel } from '../parse'
 import { computeVisible } from '../visibleGraph'
 
 const options = (overrides: Partial<ViewOptions> = {}): ViewOptions => ({
-  ...(Object.fromEntries(VIEW_OPTIONS.map((o) => [o.key, o.defaultValue])) as Omit<ViewOptions, 'direction'>),
+  ...(Object.fromEntries(VIEW_OPTIONS.map((o) => [o.key, o.defaultValue])) as Record<ToggleOptionKey, boolean>),
   direction: 'TB',
+  layoutMode: 'layered',
+  spacing: 'normal',
   ...overrides,
 })
 
-const graph = buildGraph([parseModel(loadSampleText(), 'library.ecore', 0)])
+const graph = buildGraph([parseModel(SAMPLES[0]!.files[0]!.text, 'library.ecore', 0)])
 const measure = createTextMeasurer()
 const find = (name: string) => [...graph.nodes.values()].find((n) => n.name === name) as GraphNode
 
@@ -112,5 +114,36 @@ describe('geometry and layout', () => {
     expect(tb.dy).toBeGreaterThan(tb.dx / 4)
     expect(lr.dx).toBeGreaterThan(0)
     expect(lr.dx).toBeGreaterThan(lr.dy / 4)
+  })
+})
+
+describe('layout modes', () => {
+  const lay = (layoutMode: ViewOptions['layoutMode'], spacing: ViewOptions['spacing'] = 'normal') => {
+    const opts = options({ layoutMode, spacing })
+    const { visible, geometry } = geometryFor(opts)
+    return { visible, geometry, positions: layoutNodes(visible.nodes, visible.edges, geometry, 'TB', layoutMode, spacing) }
+  }
+
+  it('places every node in every mode', () => {
+    for (const mode of ['layered', 'structure', 'inheritance', 'grid'] as const) {
+      const { visible, positions } = lay(mode)
+      for (const n of visible.nodes) expect(Number.isFinite(positions.get(n.id)?.x)).toBe(true)
+    }
+  })
+
+  it('keeps unrelated boxes out of the hierarchy in inheritance mode', () => {
+    const { positions } = lay('inheritance')
+    const loan = positions.get(find('Loan').id)!
+    const item = positions.get(find('Item').id)!
+    expect(loan.y).toBeGreaterThan(item.y)
+  })
+
+  it('spreads boxes further apart when spacious', () => {
+    const extent = (spacing: ViewOptions['spacing']) => {
+      const { positions } = lay('layered', spacing)
+      const xs = [...positions.values()].map((p) => p.x)
+      return Math.max(...xs) - Math.min(...xs)
+    }
+    expect(extent('spacious')).toBeGreaterThan(extent('compact'))
   })
 })

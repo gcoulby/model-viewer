@@ -1,6 +1,7 @@
 import dagre from '@dagrejs/dagre'
 import type { GraphEdge, GraphNode } from '@/types/graph'
-import type { LayoutDirection, NodeGeometry } from '@/types/view'
+import { LAYOUT_SPACINGS } from '@/data/layoutOptions'
+import type { LayoutDirection, LayoutMode, LayoutSpacing, NodeGeometry } from '@/types/view'
 
 export interface Position {
   x: number
@@ -16,8 +17,34 @@ const GRID_CLEARANCE = 90
 
 const KIND_ORDER: Record<GraphNode['kind'], number> = { class: 0, enum: 1, datatype: 2, external: 3 }
 
+function packageName(node: GraphNode): string {
+  return node.kind === 'external' ? '~' : node.package.fullName
+}
+
 function compareNodes(a: GraphNode, b: GraphNode): number {
   return KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.name.localeCompare(b.name)
+}
+
+function comparePackages(a: GraphNode, b: GraphNode): number {
+  return (
+    packageName(a).localeCompare(packageName(b)) ||
+    (a.kind === 'external' ? 1 : 0) - (b.kind === 'external' ? 1 : 0) ||
+    compareNodes(a, b)
+  )
+}
+
+/** The edges that decide where boxes go; the rest are only drawn over the result. */
+function shapesLayout(edge: GraphEdge, mode: LayoutMode): boolean {
+  switch (mode) {
+    case 'layered':
+      return true
+    case 'structure':
+      return edge.kind === 'inherit' || edge.kind === 'containment'
+    case 'inheritance':
+      return edge.kind === 'inherit'
+    case 'grid':
+      return false
+  }
 }
 
 function placeGrid(
@@ -27,6 +54,7 @@ function placeGrid(
   originX: number,
   originY: number,
   maxWidth: number,
+  gap: number,
 ) {
   let x = originX
   let y = originY
@@ -36,11 +64,11 @@ function placeGrid(
     if (!geo) continue
     if (x > originX && x + geo.width > originX + maxWidth) {
       x = originX
-      y += rowHeight + GRID_GAP
+      y += rowHeight + gap
       rowHeight = 0
     }
     positions.set(node.id, { x, y })
-    x += geo.width + GRID_GAP
+    x += geo.width + gap
     rowHeight = Math.max(rowHeight, geo.height)
   }
 }
@@ -51,22 +79,28 @@ export function layoutNodes(
   edges: GraphEdge[],
   geometry: Map<string, NodeGeometry>,
   direction: LayoutDirection,
+  mode: LayoutMode = 'layered',
+  spacing: LayoutSpacing = 'normal',
 ): Map<string, Position> {
   const positions = new Map<string, Position>()
+  const factor = LAYOUT_SPACINGS.find((s) => s.value === spacing)?.factor ?? 1
+  const gridGap = GRID_GAP * factor
+  const compare = mode === 'grid' ? comparePackages : compareNodes
+  edges = edges.filter((e) => shapesLayout(e, mode))
   const linked = new Set<string>()
   for (const e of edges) {
     linked.add(e.from)
     linked.add(e.to)
   }
   const connected = nodes.filter((n) => linked.has(n.id))
-  let isolated = nodes.filter((n) => !linked.has(n.id)).sort(compareNodes)
+  let isolated = nodes.filter((n) => !linked.has(n.id)).sort(compare)
 
   let laidOut = false
   let bounds = { minX: 0, maxX: 0, maxY: 0 }
   if (connected.length) {
     try {
       const g = new dagre.graphlib.Graph({ multigraph: true })
-      g.setGraph({ rankdir: direction, nodesep: NODE_SEP, ranksep: RANK_SEP, marginx: 0, marginy: 0 })
+      g.setGraph({ rankdir: direction, nodesep: NODE_SEP * factor, ranksep: RANK_SEP * factor, marginx: 0, marginy: 0 })
       g.setDefaultEdgeLabel(() => ({}))
       for (const n of connected) {
         const geo = geometry.get(n.id)
@@ -107,11 +141,11 @@ export function layoutNodes(
   }
 
   if (!laidOut) {
-    isolated = [...nodes].sort(compareNodes)
-    placeGrid(isolated, geometry, positions, 0, 0, GRID_FALLBACK_WIDTH)
+    isolated = [...nodes].sort(compare)
+    placeGrid(isolated, geometry, positions, 0, 0, GRID_FALLBACK_WIDTH, gridGap)
   } else if (isolated.length) {
     const width = Math.max(GRID_MIN_WIDTH, bounds.maxX - bounds.minX)
-    placeGrid(isolated, geometry, positions, bounds.minX, bounds.maxY + GRID_CLEARANCE, width)
+    placeGrid(isolated, geometry, positions, bounds.minX, bounds.maxY + GRID_CLEARANCE, width, gridGap)
   }
   return positions
 }

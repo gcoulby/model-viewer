@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { loadSampleText, SAMPLE_FILE_NAME } from '@/data/loadSample'
+import type { Sample } from '@/data/samples'
 import type { AddResult } from '@/contexts/models-context'
 import { useModels } from '@/hooks/useModels'
 
@@ -35,10 +35,12 @@ export function useLoadFiles() {
     [addPasted],
   )
 
-  const loadSample = useCallback(() => {
-    const result = addSources([{ name: SAMPLE_FILE_NAME, text: loadSampleText() }])
-    reportErrors(result.errors)
-  }, [addSources])
+  const loadSample = useCallback(
+    (sample: Sample) => {
+      reportErrors(addSources(sample.files).errors)
+    },
+    [addSources],
+  )
 
   return { loadFiles, loadPasted, loadSample }
 }

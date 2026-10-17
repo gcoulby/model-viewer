@@ -14,7 +14,7 @@ export function EmptyState() {
         <div className="flex flex-wrap gap-2">
           <OpenFilesButton />
           <PasteButton />
-          <SampleButton label="Try the sample" />
+          <SampleButton label="Try a sample" />
         </div>
       </div>
     </div>

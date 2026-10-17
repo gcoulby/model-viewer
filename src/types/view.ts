@@ -1,6 +1,11 @@
 
 export type LayoutDirection = 'TB' | 'LR'
 
+/** Which links place the boxes; links outside the mode are still drawn. */
+export type LayoutMode = 'layered' | 'structure' | 'inheritance' | 'grid'
+
+export type LayoutSpacing = 'compact' | 'normal' | 'spacious'
+
 export interface ViewOptions {
   attributes: boolean
   operations: boolean
@@ -11,6 +16,8 @@ export interface ViewOptions {
   dataTypes: boolean
   external: boolean
   direction: LayoutDirection
+  layoutMode: LayoutMode
+  spacing: LayoutSpacing
 }
 
 export interface NodeGeometry {
