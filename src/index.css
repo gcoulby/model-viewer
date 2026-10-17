@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-grid: var(--grid);
+  --color-node: var(--node);
+  --color-edge: var(--edge);
+  --color-halo: var(--halo);
+  --color-tint: var(--tint);
+  --color-selection: var(--selection);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  --background: #eceff3;
+  --foreground: #172029;
+  --card: #f8f9fb;
+  --card-foreground: #172029;
+  --popover: #f8f9fb;
+  --popover-foreground: #172029;
+  --primary: #2745d1;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f5;
+  --secondary-foreground: #172029;
+  --muted: #eef1f5;
+  --muted-foreground: #596574;
+  --accent: #eef1f5;
+  --accent-foreground: #172029;
+  --destructive: #c62828;
+  --border: #d4dae2;
+  --input: #d4dae2;
+  --ring: #2745d1;
+  --radius: 0.5rem;
+  --sidebar: #f8f9fb;
+  --sidebar-foreground: #172029;
+  --sidebar-primary: #2745d1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef1f5;
+  --sidebar-accent-foreground: #172029;
+  --sidebar-border: #d4dae2;
+  --sidebar-ring: #2745d1;
+  --grid: #d3d9e1;
+  --node: #ffffff;
+  --edge: #45515f;
+  --halo: #eceff3;
+  --tint: rgba(39, 69, 209, 0.1);
+  --selection: #2745d1;
+}
+
+.dark {
+  --background: #11161c;
+  --foreground: #e4e9ef;
+  --card: #171d25;
+  --card-foreground: #e4e9ef;
+  --popover: #171d25;
+  --popover-foreground: #e4e9ef;
+  --primary: #7f9bff;
+  --primary-foreground: #0e1320;
+  --secondary: #1e2631;
+  --secondary-foreground: #e4e9ef;
+  --muted: #1e2631;
+  --muted-foreground: #93a0b0;
+  --accent: #1e2631;
+  --accent-foreground: #e4e9ef;
+  --destructive: #ef6a6a;
+  --border: #2b3544;
+  --input: #2b3544;
+  --ring: #7f9bff;
+  --sidebar: #171d25;
+  --sidebar-foreground: #e4e9ef;
+  --sidebar-primary: #7f9bff;
+  --sidebar-primary-foreground: #0e1320;
+  --sidebar-accent: #1e2631;
+  --sidebar-accent-foreground: #e4e9ef;
+  --sidebar-border: #2b3544;
+  --sidebar-ring: #7f9bff;
+  --grid: #222b36;
+  --node: #1b232d;
+  --edge: #9aa7b8;
+  --halo: #11161c;
+  --tint: rgba(127, 155, 255, 0.14);
+  --selection: #8fa8ff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+  body {
+    @apply bg-background font-sans text-[13.5px] leading-[1.45] text-foreground;
+    overflow: hidden;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+}
