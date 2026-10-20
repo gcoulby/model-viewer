@@ -6,7 +6,8 @@ import { useModels } from '@/hooks/useModels'
 import { useViewOptions } from '@/hooks/useViewOptions'
 import { buildGraph } from '@/lib/ecore/buildGraph'
 import { edgeTitle } from '@/lib/ecore/edgeStyle'
-import { layoutNodes, type Position } from '@/lib/ecore/layout'
+import { layoutByFile } from '@/lib/ecore/layoutGroups'
+import type { Position } from '@/lib/ecore/layout'
 import { computeGeometry, createTextMeasurer, waitForFonts } from '@/lib/ecore/measure'
 import { computeParallel, computeVisible } from '@/lib/ecore/visibleGraph'
 import type { NodeGeometry } from '@/types/view'
@@ -38,14 +39,14 @@ function useFontsReady(): boolean {
 }
 
 export function DiagramProvider({ children }: { children: ReactNode }) {
-  const { models } = useModels()
+  const { models, links } = useModels()
   const { options } = useViewOptions()
   const fontsReady = useFontsReady()
   const measure = useMemo(createTextMeasurer, [])
   const [relayoutCount, setRelayoutCount] = useState(0)
   const [collapsedState, setCollapsedState] = useState<CollapsedState>({ layout: null, ids: new Set() })
 
-  const graph = useMemo(() => (models.length ? buildGraph(models) : null), [models])
+  const graph = useMemo(() => (models.length ? buildGraph(models, links) : null), [models, links])
   const visible = useMemo(() => (graph ? computeVisible(graph, options) : null), [graph, options])
 
   // Layout is recomputed whenever the graph, a view option, the direction or a re-layout request changes.
@@ -54,7 +55,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     if (!visible || !fontsReady) return null
     const geometry = new Map<string, NodeGeometry>()
     for (const node of visible.nodes) geometry.set(node.id, computeGeometry(node, options, false, measure))
-    const positions = layoutNodes(
+    const positions = layoutByFile(
       visible.nodes,
       visible.edges,
       geometry,

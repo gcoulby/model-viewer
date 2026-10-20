@@ -9,6 +9,7 @@ import type { ParsedModel } from '@/types/ecore'
 
 export function ModelsProvider({ children }: { children: ReactNode }) {
   const [models, setModels] = useState<ParsedModel[]>([])
+  const [links, setLinks] = useState<ReadonlyMap<string, string>>(new Map())
   const nextIndex = useRef(0)
 
   const addSources = useCallback((sources: ModelSource[]): AddResult => {
@@ -24,7 +25,9 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
     }
     if (parsed.length) {
       const keys = new Set(parsed.map((m) => m.key))
-      setModels((prev) => [...prev.filter((m) => !keys.has(m.key)), ...parsed])
+      setModels((prev) =>
+        [...prev.filter((m) => !keys.has(m.key)), ...parsed].sort((a, b) => a.key.localeCompare(b.key)),
+      )
     }
     return { added: parsed.length, errors }
   }, [])
@@ -38,9 +41,13 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
     setModels((prev) => prev.filter((m) => m.key !== key))
   }, [])
 
+  const linkExternal = useCallback((uri: string, modelKey: string) => {
+    setLinks((prev) => new Map(prev).set(uri, modelKey))
+  }, [])
+
   const value = useMemo(
-    () => ({ models, addSources, addPasted, removeModel }),
-    [models, addSources, addPasted, removeModel],
+    () => ({ models, addSources, addPasted, removeModel, links, linkExternal }),
+    [models, addSources, addPasted, removeModel, links, linkExternal],
   )
   return <ModelsContext.Provider value={value}>{children}</ModelsContext.Provider>
 }

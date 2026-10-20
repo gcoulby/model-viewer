@@ -35,6 +35,8 @@ export interface PackageInfo {
   fullName: string
   nsURI: string
   fileName: string
+  /** `ParsedModel.key` of the file the package is in. */
+  fileKey: string
   modelIndex: number
 }
 

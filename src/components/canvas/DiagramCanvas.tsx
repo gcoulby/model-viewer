@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import {
   Background,
+  type NodeChange,
   BackgroundVariant,
   ReactFlow,
   useNodesState,
@@ -10,6 +11,7 @@ import { useDiagram } from '@/hooks/useDiagram'
 import { useLoadFiles } from '@/hooks/useLoadFiles'
 import { useSelection } from '@/hooks/useSelection'
 import { useTheme } from '@/hooks/useTheme'
+import { computeGroupBoxes } from '@/lib/ecore/groups'
 import { neighbourhood } from '@/lib/ecore/visibleGraph'
 import { cn } from '@/lib/utils'
 import { afterPaint } from './afterPaint'
@@ -18,7 +20,7 @@ import { EdgeMarkers } from './edges/EdgeMarkers'
 import { edgeTypes, type DiagramEdge } from './edges/edgeTypes'
 import { EmptyState } from './EmptyState'
 import { FIT_OPTIONS, MAX_ZOOM, MIN_ZOOM } from './fitOptions'
-import { nodeTypes, type DiagramNode } from './nodes/nodeTypes'
+import { nodeTypes, type CanvasNode, type DiagramNode } from './nodes/nodeTypes'
 import { ZoomPanel } from './ZoomPanel'
 
 const FADE = 'transition-opacity duration-150 motion-reduce:transition-none'
@@ -30,8 +32,8 @@ export function DiagramCanvas() {
   const { theme } = useTheme()
   const { graph, visible, layout, nodes: layoutNodesList, edges, toggleCollapsed } = useDiagram()
   const { selectedId, centerRequest, select, clear } = useSelection()
-  const { loadFiles } = useLoadFiles()
-  const { fitView, setCenter, getNode, getZoom } = useReactFlow<DiagramNode, DiagramEdge>()
+  const { loadDropped } = useLoadFiles()
+  const { fitView, setCenter, getNode, getZoom } = useReactFlow<CanvasNode, DiagramEdge>()
   const [nodes, setNodes, onNodesChange] = useNodesState<DiagramNode>([])
   const [dropping, setDropping] = useState(false)
   const appliedLayout = useRef<object | null>(null)
@@ -80,15 +82,35 @@ export function DiagramCanvas() {
     [graph, visible, selectedId],
   )
 
-  const displayNodes = useMemo<DiagramNode[]>(
-    () =>
+  const displayNodes = useMemo<CanvasNode[]>(() => {
+    const groups = computeGroupBoxes(
       nodes.map((n) => ({
-        ...n,
-        selected: n.id === selectedId,
-        className: focus && !focus.nodeIds.has(n.id) ? DIMMED : FADE,
+        node: n.data.node,
+        x: n.position.x,
+        y: n.position.y,
+        width: n.width ?? n.data.geometry.width,
+        height: n.height ?? n.data.geometry.height,
       })),
-    [nodes, selectedId, focus],
-  )
+    ).map<CanvasNode>((g) => ({
+      id: `group|${g.key}`,
+      type: 'fileGroup',
+      position: { x: g.x, y: g.y },
+      width: g.width,
+      height: g.height,
+      zIndex: -1,
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      className: 'pointer-events-none',
+      data: { fileKey: g.key, label: g.label },
+    }))
+    const typed = nodes.map<CanvasNode>((n) => ({
+      ...n,
+      selected: n.id === selectedId,
+      className: focus && !focus.nodeIds.has(n.id) ? DIMMED : FADE,
+    }))
+    return [...groups, ...typed]
+  }, [nodes, selectedId, focus])
 
   const displayEdges = useMemo<DiagramEdge[]>(
     () => edges.map((e) => ({ ...e, className: focus && !focus.edgeIds.has(e.id) ? DIMMED : FADE })),
@@ -105,8 +127,7 @@ export function DiagramCanvas() {
   const onDrop = (event: DragEvent) => {
     event.preventDefault()
     setDropping(false)
-    const files = Array.from(event.dataTransfer.files)
-    if (files.length) void loadFiles(files)
+    void loadDropped(event.dataTransfer)
   }
 
   return (
@@ -118,15 +139,18 @@ export function DiagramCanvas() {
       onDrop={onDrop}
     >
       <EdgeMarkers />
-      <ReactFlow<DiagramNode, DiagramEdge>
+      <ReactFlow<CanvasNode, DiagramEdge>
         nodes={displayNodes}
         edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        onNodeClick={(_, node) => select(node.id)}
+        // Changes to the file boxes are ignored: they are derived, so the state holds no node with their ids.
+        onNodesChange={(changes) => onNodesChange(changes as NodeChange<DiagramNode>[])}
+        onNodeClick={(_, node) => {
+          if (node.type !== 'fileGroup') select(node.id)
+        }}
         onNodeDoubleClick={(_, node) => {
-          if (node.data.node.kind !== 'external') toggleCollapsed(node.id)
+          if (node.type !== 'fileGroup' && node.data.node.kind !== 'external') toggleCollapsed(node.id)
         }}
         onPaneClick={clear}
         colorMode={theme}

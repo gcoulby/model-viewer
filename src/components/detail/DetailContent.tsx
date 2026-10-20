@@ -5,6 +5,7 @@ import type { GraphNode, ModelGraph } from '@/types/graph'
 import { ClassifierChips } from './ClassifierChips'
 import { DetailHeader } from './DetailHeader'
 import { DetailSection } from './DetailSection'
+import { ExternalLinkSelect } from './ExternalLinkSelect'
 import { FeatureList } from './FeatureList'
 import { InheritedFeatures } from './InheritedFeatures'
 
@@ -29,11 +30,19 @@ export function DetailContent({ graph, node, onClose }: DetailContentProps) {
     <div>
       <DetailHeader node={node} onClose={onClose} />
       {node.kind === 'external' && (
-        <p className="mt-3.5 text-[12.5px] text-muted-foreground">
-          {node.source === ECORE_BUILTIN_SOURCE
-            ? 'This type comes from the Ecore package itself.'
-            : `Defined in ${node.source}, which has not been loaded. Open that file as well to see the real class.`}
-        </p>
+        <div className="mt-3.5 text-[12.5px] text-muted-foreground">
+          {node.source === ECORE_BUILTIN_SOURCE ? (
+            <p>This type comes from the Ecore package itself.</p>
+          ) : (
+            <>
+              <p>
+                Defined in {node.source}, which has not been loaded. Open that file as well, or choose the
+                loaded file that defines it.
+              </p>
+              <ExternalLinkSelect source={node.source} />
+            </>
+          )}
+        </div>
       )}
       {supertypes.length > 0 && (
         <DetailSection title="Supertypes" count={supertypes.length}>

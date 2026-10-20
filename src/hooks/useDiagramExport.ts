@@ -2,7 +2,8 @@ import { useCallback } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { toast } from 'sonner'
 import type { DiagramEdge } from '@/components/canvas/edges/edgeTypes'
-import type { DiagramNode } from '@/components/canvas/nodes/nodeTypes'
+import type { CanvasNode } from '@/components/canvas/nodes/nodeTypes'
+import { useFileColors } from '@/hooks/useFileColors'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useModels } from '@/hooks/useModels'
 import { useTheme } from '@/hooks/useTheme'
@@ -50,30 +51,33 @@ function renderPng(svg: DiagramSvg): Promise<Blob> {
 }
 
 export function useDiagramExport() {
-  const { getNodes } = useReactFlow<DiagramNode, DiagramEdge>()
+  const { getNodes } = useReactFlow<CanvasNode, DiagramEdge>()
   const { visible } = useDiagram()
   const { models } = useModels()
   const { theme } = useTheme()
+  const { hueFor } = useFileColors()
 
   return useCallback(
     async (format: ExportFormat) => {
       if (!visible) return
-      const nodes = getNodes().map((n) => ({
-        node: n.data.node,
-        geometry: n.data.geometry,
-        x: n.position.x,
-        y: n.position.y,
-      }))
+      const nodes = getNodes()
+        .flatMap((n) => (n.type === 'fileGroup' ? [] : [n]))
+        .map((n) => ({
+          node: n.data.node,
+          geometry: n.data.geometry,
+          x: n.position.x,
+          y: n.position.y,
+        }))
       const parallel = computeParallel(visible.edges)
       const edges = visible.edges.flatMap((edge) => {
         const info = parallel.get(edge.id)
         return info ? [{ edge, parallel: info }] : []
       })
-      const svg = buildDiagramSvg({ nodes, edges, dark: theme === 'dark', colors: readColors() })
+      const svg = buildDiagramSvg({ nodes, edges, dark: theme === 'dark', hueFor, colors: readColors() })
       if (!svg) return
 
       const first = models[0]
-      const baseName = first ? first.fileName.replace(/\.[^.]+$/, '') : 'diagram'
+      const baseName = first ? first.fileName.replace(/^.*\//, '').replace(/\.[^.]+$/, '') : 'diagram'
       if (format === 'svg') {
         downloadBlob(`${baseName}.svg`, new Blob([svg.text], { type: 'image/svg+xml' }))
         return
@@ -88,6 +92,6 @@ export function useDiagramExport() {
         )
       }
     },
-    [getNodes, visible, models, theme],
+    [getNodes, visible, models, theme, hueFor],
   )
 }

@@ -1,4 +1,5 @@
 import { Handle, Position } from '@xyflow/react'
+import { useFileColors } from '@/hooks/useFileColors'
 import { useTheme } from '@/hooks/useTheme'
 import { paintForNode } from '@/lib/ecore/paint'
 import { cn } from '@/lib/utils'
@@ -15,8 +16,9 @@ const HANDLE_CLASS = 'pointer-events-none !size-0 !min-h-0 !min-w-0 !border-0 !o
 /** Header, stereotype and compartments shared by every node type. */
 export function NodeFrame({ data, selected, dashed = false }: NodeFrameProps) {
   const { theme } = useTheme()
+  const { hueFor } = useFileColors()
   const { node, geometry } = data
-  const paint = paintForNode(node, theme === 'dark')
+  const paint = paintForNode(node, theme === 'dark', hueFor)
   const italic = node.kind === 'class' && node.abstract
 
   return (

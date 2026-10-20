@@ -1,21 +1,19 @@
-import type { GraphNode, PackageInfo } from '@/types/graph'
+import type { GraphNode } from '@/types/graph'
 import type { NodePaint } from '@/types/view'
 
-const hueByPackage = new Map<string, number>()
+/** Hue for a file key; the colour a file gets until the user picks one. */
+export type HueFor = (fileKey: string) => number
 
-/** Package hues are handed out in first-seen order and stay fixed for the page's lifetime. */
-export function packageHue(pkg: PackageInfo): number {
-  const key = `${pkg.modelIndex}|${pkg.fullName}`
-  let hue = hueByPackage.get(key)
+const defaultHues = new Map<string, number>()
+
+/** Default hues are handed out in first-seen order and stay fixed for the page's lifetime. */
+export function defaultFileHue(fileKey: string): number {
+  let hue = defaultHues.get(fileKey)
   if (hue === undefined) {
-    hue = Math.round((hueByPackage.size * 137.508 + 205) % 360)
-    hueByPackage.set(key, hue)
+    hue = Math.round((defaultHues.size * 137.508 + 205) % 360)
+    defaultHues.set(fileKey, hue)
   }
   return hue
-}
-
-export function resetPackageHues() {
-  hueByPackage.clear()
 }
 
 export function paintForHue(hue: number, dark: boolean): NodePaint {
@@ -28,11 +26,24 @@ export function externalPaint(dark: boolean): NodePaint {
   return dark ? { header: '#26303c', stroke: '#6b7a8c' } : { header: '#e3e8ee', stroke: '#8b97a6' }
 }
 
-export function paintForNode(node: GraphNode, dark: boolean): NodePaint {
-  return node.kind === 'external' ? externalPaint(dark) : paintForHue(packageHue(node.package), dark)
+export function paintForNode(node: GraphNode, dark: boolean, hueFor: HueFor): NodePaint {
+  return node.kind === 'external' ? externalPaint(dark) : paintForHue(hueFor(node.package.fileKey), dark)
 }
 
-export function packageDotColor(pkg: PackageInfo, dark: boolean): string {
-  const hue = packageHue(pkg)
+export function dotColor(hue: number, dark: boolean): string {
   return dark ? `hsl(${hue},40%,58%)` : `hsl(${hue},45%,52%)`
 }
+
+/** Tinted fill and outline for the box drawn behind a file's nodes. */
+export function groupPaint(hue: number | null, dark: boolean): { fill: string; stroke: string; label: string } {
+  if (hue === null) {
+    return dark
+      ? { fill: 'hsla(215,15%,60%,.07)', stroke: 'hsla(215,15%,60%,.45)', label: 'hsl(215,15%,72%)' }
+      : { fill: 'hsla(215,15%,40%,.05)', stroke: 'hsla(215,15%,40%,.4)', label: 'hsl(215,15%,38%)' }
+  }
+  return dark
+    ? { fill: `hsla(${hue},40%,58%,.08)`, stroke: `hsla(${hue},40%,58%,.55)`, label: `hsl(${hue},45%,75%)` }
+    : { fill: `hsla(${hue},50%,50%,.06)`, stroke: `hsla(${hue},38%,46%,.55)`, label: `hsl(${hue},45%,32%)` }
+}
+
+export const HUE_CHOICES = [0, 25, 50, 90, 140, 170, 195, 215, 245, 275, 305, 335] as const

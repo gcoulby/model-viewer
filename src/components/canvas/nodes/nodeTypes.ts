@@ -5,6 +5,7 @@ import { ClassNode } from './ClassNode'
 import { DataTypeNode } from './DataTypeNode'
 import { EnumNode } from './EnumNode'
 import { ExternalNode } from './ExternalNode'
+import { FileGroupNodeView, type FileGroupNode } from './FileGroupNode'
 
 export interface DiagramNodeData extends Record<string, unknown> {
   node: GraphNode
@@ -15,7 +16,11 @@ export type DiagramNodeType = 'classNode' | 'enumNode' | 'dataTypeNode' | 'exter
 
 export type DiagramNode = Node<DiagramNodeData, DiagramNodeType>
 
+/** Everything the canvas draws: the type nodes plus the per-file boxes behind them. */
+export type CanvasNode = DiagramNode | FileGroupNode
+
 export const nodeTypes = {
+  fileGroup: FileGroupNodeView,
   classNode: ClassNode,
   enumNode: EnumNode,
   dataTypeNode: DataTypeNode,

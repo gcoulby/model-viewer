@@ -1,8 +1,9 @@
 import { ChevronRightIcon } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { useFileColors } from '@/hooks/useFileColors'
 import { useTheme } from '@/hooks/useTheme'
-import { packageDotColor } from '@/lib/ecore/paint'
-import { packageInfoOf, type TreePackage } from '@/lib/ecore/treeModel'
+import { dotColor } from '@/lib/ecore/paint'
+import type { TreePackage } from '@/lib/ecore/treeModel'
 import type { ParsedModel } from '@/types/ecore'
 import { ModelTreeItem } from './ModelTreeItem'
 
@@ -13,7 +14,8 @@ interface ModelTreePackageProps {
 
 export function ModelTreePackage({ tree, model }: ModelTreePackageProps) {
   const { theme } = useTheme()
-  const dot = packageDotColor(packageInfoOf(tree.pkg, model), theme === 'dark')
+  const { hueFor } = useFileColors()
+  const dot = dotColor(hueFor(model.key), theme === 'dark')
   return (
     <Collapsible defaultOpen>
       <CollapsibleTrigger className="group/trigger flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 font-medium hover:bg-muted">

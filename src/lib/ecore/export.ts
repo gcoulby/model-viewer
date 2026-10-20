@@ -3,7 +3,8 @@ import type { NodeGeometry } from '@/types/view'
 import { computeEdgePath, type Box } from './edgeGeometry'
 import { edgeLabels, edgeStyleFor, type MarkerKind } from './edgeStyle'
 import { ROW_HEIGHT } from './measure'
-import { paintForNode } from './paint'
+import { computeGroupBoxes, EXTERNAL_GROUP, type GroupBox } from './groups'
+import { groupPaint, paintForNode, type HueFor } from './paint'
 
 export interface ExportNode {
   node: GraphNode
@@ -30,6 +31,7 @@ export interface ExportInput {
   nodes: ExportNode[]
   edges: ExportEdge[]
   dark: boolean
+  hueFor: HueFor
   colors: ExportColors
 }
 
@@ -91,9 +93,14 @@ function edgeSvg(
   return `<g><path ${attrs}/>${labels}</g>`
 }
 
-function nodeSvg({ node, geometry, x, y }: ExportNode, dark: boolean, c: ExportColors): string {
+function groupSvg(g: GroupBox, dark: boolean, hueFor: HueFor): string {
+  const paint = groupPaint(g.key === EXTERNAL_GROUP ? null : hueFor(g.key), dark)
+  return `<g transform="translate(${round(g.x)},${round(g.y)})"><rect width="${round(g.width)}" height="${round(g.height)}" rx="12" fill="${paint.fill}" stroke="${paint.stroke}" stroke-width="1.5" stroke-dasharray="6 4"/><text x="14" y="22" font-size="12.5" font-weight="500" font-family="${FONT_MONO}" fill="${paint.label}">${escapeXml(g.label)}</text></g>`
+}
+
+function nodeSvg({ node, geometry, x, y }: ExportNode, dark: boolean, hueFor: HueFor, c: ExportColors): string {
   const { width: w, height: h, headerHeight: hh, stereotype, compartments } = geometry
-  const paint = paintForNode(node, dark)
+  const paint = paintForNode(node, dark, hueFor)
   const dash = node.kind === 'external' ? ' stroke-dasharray="5 4"' : ''
   const italic = node.kind === 'class' && node.abstract ? ' font-style="italic"' : ''
   const parts: string[] = [
@@ -131,6 +138,15 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
   let minY = Infinity
   let maxX = -Infinity
   let maxY = -Infinity
+  const groups = computeGroupBoxes(
+    input.nodes.map((n) => ({ node: n.node, x: n.x, y: n.y, width: n.geometry.width, height: n.geometry.height })),
+  )
+  for (const g of groups) {
+    minX = Math.min(minX, g.x)
+    minY = Math.min(minY, g.y)
+    maxX = Math.max(maxX, g.x + g.width)
+    maxY = Math.max(maxY, g.y + g.height)
+  }
   for (const n of input.nodes) {
     boxes.set(n.node.id, { x: n.x, y: n.y, width: n.geometry.width, height: n.geometry.height })
     minX = Math.min(minX, n.x)
@@ -145,8 +161,9 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
     markerDefs(c),
     `<rect width="${width}" height="${height}" fill="${c.background}"/>`,
     `<g transform="translate(${round(PADDING - minX)} ${round(PADDING - minY)})">`,
+    ...groups.map((g) => groupSvg(g, input.dark, input.hueFor)),
     ...input.edges.map((e) => edgeSvg(e, boxes, c)),
-    ...input.nodes.map((n) => nodeSvg(n, input.dark, c)),
+    ...input.nodes.map((n) => nodeSvg(n, input.dark, input.hueFor, c)),
     '</g>',
   ].join('\n')
   const text = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">\n${body}\n</svg>`

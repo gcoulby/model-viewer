@@ -1,3 +1,4 @@
+import { dirOf, normalisePath } from './paths'
 import type {
   Multiplicity,
   ParsedAttribute,
@@ -61,10 +62,12 @@ export function parseModel(text: string, fileName: string, index: number): Parse
   if (!packageElements.length) {
     throw new Error(`${fileName}: no EPackage found, so this does not look like an Ecore file.`)
   }
+  const path = normalisePath(fileName) || fileName
   const model: ParsedModel = {
     index,
-    fileName,
-    key: fileName.replace(/^.*[\\/]/, '').toLowerCase(),
+    fileName: path,
+    key: path.toLowerCase(),
+    dir: dirOf(path).toLowerCase(),
     roots: [],
     packages: [],
     classifiers: [],

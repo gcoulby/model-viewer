@@ -2,6 +2,7 @@ import { createContext } from 'react'
 import type { ParsedModel } from '@/types/ecore'
 
 export interface ModelSource {
+  /** Path relative to the opened folder, or just the file name. */
   name: string
   text: string
 }
@@ -19,6 +20,10 @@ export interface ModelsContextValue {
   /** Adds pasted XML under the next free `pasted-<n>.ecore` name. */
   addPasted: (text: string) => AddResult
   removeModel: (key: string) => void
+  /** Manual links from an unresolved external's URI to the key of a loaded file. */
+  links: ReadonlyMap<string, string>
+  /** Points every reference to `uri` at the loaded file `modelKey`. */
+  linkExternal: (uri: string, modelKey: string) => void
 }
 
 export const ModelsContext = createContext<ModelsContextValue | null>(null)

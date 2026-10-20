@@ -1,4 +1,5 @@
 import { ECORE_NAMESPACE } from '@/data/ecoreNamespace'
+import { hasScheme, pathSegments, resolveRelative, uriPath } from './paths'
 import type {
   ParsedAttribute,
   ParsedClassifier,
@@ -7,6 +8,11 @@ import type {
 } from '@/types/ecore'
 
 export type PathObject = ParsedClassifier | ParsedAttribute | ParsedReference
+
+/** User-made links from an unresolved external's URI (as the external node shows it) to a loaded file's key. */
+export type ManualLinks = ReadonlyMap<string, string>
+
+const NO_LINKS: ManualLinks = new Map()
 
 export type ModelIndexes = Map<number, Map<string, PathObject>>
 
@@ -30,8 +36,46 @@ export function buildPathIndexes(models: ParsedModel[]): ModelIndexes {
   return indexes
 }
 
-function baseFileName(uri: string): string {
-  return uri.replace(/^.*[\\/]/, '').toLowerCase()
+function pathSuffixMatch(models: ParsedModel[], path: string): ParsedModel | undefined {
+  const segments = pathSegments(path.toLowerCase())
+  for (let k = segments.length; k >= 1; k--) {
+    const tail = segments.slice(-k).join('/')
+    const hits = models.filter((m) => m.key === tail || m.key.endsWith(`/${tail}`))
+    if (hits.length === 1) return hits[0]
+  }
+  return undefined
+}
+
+/**
+ * The loaded file a reference URI points at, or null. A relative URI is read against the referencing
+ * file's folder; anything else (`file:`, `platform:`, a path leaving the opened folder) falls back to the
+ * longest unique path suffix, then to a matching `nsURI`.
+ */
+export function findTargetModel(
+  from: ParsedModel,
+  uri: string,
+  models: ParsedModel[],
+  links: ManualLinks = NO_LINKS,
+): ParsedModel | null {
+  const linked = links.get(displayUri(from, uri))
+  if (linked) {
+    const model = models.find((m) => m.key === linked)
+    if (model) return model
+  }
+  if (!hasScheme(uri)) {
+    const resolved = resolveRelative(from.dir, uri).toLowerCase()
+    const exact = models.find((m) => m.key === resolved)
+    if (exact) return exact
+  }
+  const byNs = models.find((m) => m.roots.some((r) => r.nsURI === uri))
+  if (byNs) return byNs
+  const path = uriPath(uri)
+  return path ? (pathSuffixMatch(models, path) ?? null) : null
+}
+
+/** The URI as a path from the opened folder when it is relative, otherwise unchanged. */
+function displayUri(from: ParsedModel, uri: string): string {
+  return hasScheme(uri) ? uri : resolveRelative(from.dir, uri)
 }
 
 /** Resolves a `<uri>#<fragment>` token seen from `model`. Returns null for an empty token. */
@@ -40,6 +84,7 @@ export function resolveRef(
   token: string,
   models: ParsedModel[],
   indexes: ModelIndexes,
+  links: ManualLinks = NO_LINKS,
 ): RefTarget | null {
   if (!token) return null
   const hash = token.indexOf('#')
@@ -49,19 +94,12 @@ export function resolveRef(
 
   if (uri.includes(ECORE_NAMESPACE)) return { status: 'builtin', name }
 
-  let target: ParsedModel | undefined
-  if (!uri) {
-    target = model
-  } else {
-    const base = baseFileName(uri)
-    target =
-      models.find((m) => m.key === base) ?? models.find((m) => m.roots.some((r) => r.nsURI === uri))
-  }
+  const target = uri ? findTargetModel(model, uri, models, links) : model
   if (target) {
     const object = indexes.get(target.index)?.get(fragment)
     if (object) return { status: 'object', object }
   }
-  return { status: 'external', name, uri: uri || model.fileName }
+  return { status: 'external', name, uri: uri ? displayUri(model, uri) : model.fileName }
 }
 
 export function targetName(target: RefTarget | null): string {

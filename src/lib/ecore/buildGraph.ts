@@ -15,7 +15,7 @@ import type {
   ResolvedOperation,
   ResolvedReference,
 } from '@/types/graph'
-import { buildPathIndexes, resolveRef, targetName, type RefTarget } from './resolve'
+import { buildPathIndexes, resolveRef, type ManualLinks, targetName, type RefTarget } from './resolve'
 
 export const ECORE_BUILTIN_SOURCE = 'Ecore (built in)'
 
@@ -23,7 +23,7 @@ function isClassifier(object: { kind: string }): object is ParsedClassifier {
   return object.kind === 'class' || object.kind === 'enum' || object.kind === 'datatype'
 }
 
-export function buildGraph(models: ParsedModel[]): ModelGraph {
+export function buildGraph(models: ParsedModel[], links?: ManualLinks): ModelGraph {
   const indexes = buildPathIndexes(models)
   const nodes = new Map<string, GraphNode>()
   const edges: GraphEdge[] = []
@@ -37,6 +37,7 @@ export function buildGraph(models: ParsedModel[]): ModelGraph {
         fullName: p.fullName,
         nsURI: p.nsURI,
         fileName: m.fileName,
+        fileKey: m.key,
         modelIndex: m.index,
       })
     }
@@ -109,7 +110,7 @@ export function buildGraph(models: ParsedModel[]): ModelGraph {
   }
 
   function resolveClass(m: ParsedModel, c: ParsedClass, node: ClassGraphNode) {
-    const resolve = (token: string) => resolveRef(m, token, models, indexes)
+    const resolve = (token: string) => resolveRef(m, token, models, indexes, links)
 
     for (const token of c.superRaw) {
       const superNode = nodeFor(resolve(token))

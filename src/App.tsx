@@ -1,6 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { AppShell } from '@/components/shell/AppShell'
 import { DiagramProvider } from '@/components/providers/DiagramProvider'
+import { FileColorsProvider } from '@/components/providers/FileColorsProvider'
 import { ModelsProvider } from '@/components/providers/ModelsProvider'
 import { PasteDialogProvider } from '@/components/providers/PasteDialogProvider'
 import { SelectionProvider } from '@/components/providers/SelectionProvider'
@@ -13,6 +14,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <TooltipProvider>
+        <FileColorsProvider>
         <ModelsProvider>
           <ViewOptionsProvider>
             <SelectionProvider>
@@ -26,6 +28,7 @@ export default function App() {
             </SelectionProvider>
           </ViewOptionsProvider>
         </ModelsProvider>
+        </FileColorsProvider>
       </TooltipProvider>
       <Toaster />
     </ThemeProvider>

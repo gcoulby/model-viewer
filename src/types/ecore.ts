@@ -88,9 +88,12 @@ export interface ParsedPackage {
 
 export interface ParsedModel {
   index: number
+  /** Path of the file relative to the opened folder, `/`-separated (just the file name for a loose file). */
   fileName: string
-  /** Lower-cased base file name. Used to match cross-file references and to replace a reloaded file. */
+  /** Lower-cased `fileName`. Used to match cross-file references and to replace a reloaded file. */
   key: string
+  /** Lower-cased directory of the file, '' at the root. Relative references are resolved against it. */
+  dir: string
   roots: ParsedPackage[]
   packages: ParsedPackage[]
   classifiers: ParsedClassifier[]

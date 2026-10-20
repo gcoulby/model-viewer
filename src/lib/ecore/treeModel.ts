@@ -21,6 +21,7 @@ export function packageInfoOf(pkg: ParsedPackage, model: ParsedModel): PackageIn
     fullName: pkg.fullName,
     nsURI: pkg.nsURI,
     fileName: model.fileName,
+    fileKey: model.key,
     modelIndex: model.index,
   }
 }
