@@ -15,6 +15,7 @@ import type {
   ResolvedOperation,
   ResolvedReference,
 } from '@/types/graph'
+import { scopeIdOf } from './scope'
 import { buildPathIndexes, resolveRef, type ManualLinks, targetName, type RefTarget } from './resolve'
 
 export const ECORE_BUILTIN_SOURCE = 'Ecore (built in)'
@@ -38,6 +39,7 @@ export function buildGraph(models: ParsedModel[], links?: ManualLinks): ModelGra
         nsURI: p.nsURI,
         fileName: m.fileName,
         fileKey: m.key,
+        scopeId: scopeIdOf(m, p),
         modelIndex: m.index,
       })
     }

@@ -2,6 +2,9 @@
 import { describe, expect, it } from 'vitest'
 import { buildGraph } from '../buildGraph'
 import { layoutByFile } from '../layoutGroups'
+import { VIEW_OPTIONS, type ToggleOptionKey } from '@/data/viewOptions'
+import { fileScopeIds, type Scope } from '../scope'
+import { computeVisible } from '../visibleGraph'
 import { normalisePath, resolveRelative } from '../paths'
 import { parseModel } from '../parse'
 import type { ClassGraphNode } from '@/types/graph'
@@ -76,5 +79,32 @@ describe('layoutByFile', () => {
       nodes.filter((n) => n.kind !== 'external' && n.package.fileName === file).map((n) => positions.get(n.id)?.y ?? NaN)
     const separated = aMax <= bMin || Math.max(...ys('a.ecore')) + 50 <= Math.min(...ys('b.ecore'))
     expect(separated).toBe(true)
+  })
+})
+
+describe('computeVisible scope', () => {
+  const opts = {
+    ...(Object.fromEntries(VIEW_OPTIONS.map((o) => [o.key, o.defaultValue])) as Record<ToggleOptionKey, boolean>),
+    direction: 'TB' as const,
+    layoutMode: 'layered' as const,
+    spacing: 'normal' as const,
+  }
+  const a = parseModel(pkg('a', cls('Base') + cls('Lonely')), 'a.ecore', 0)
+  const b = parseModel(pkg('b', cls('Child', 'a.ecore#//Base') + cls('Other')), 'b.ecore', 1)
+  const graph = buildGraph([a, b])
+  const names = (scope: Scope) =>
+    computeVisible(graph, opts, scope)
+      .nodes.map((n) => n.name)
+      .sort()
+  const aIds = fileScopeIds(a)
+
+  it('focuses on one file and the types it links to', () => {
+    const focus = (includeLinked: boolean): Scope => ({ focus: { ids: new Set(aIds), label: 'a', includeLinked }, hidden: new Set() })
+    expect(names(focus(false))).toEqual(['Base', 'Lonely'])
+    expect(names(focus(true))).toEqual(['Base', 'Child', 'Lonely'])
+  })
+
+  it('hides a package', () => {
+    expect(names({ focus: null, hidden: new Set(aIds) })).toEqual(['Child', 'Other'])
   })
 })

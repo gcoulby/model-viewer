@@ -1,5 +1,4 @@
 import type { ParsedClassifier, ParsedModel, ParsedPackage } from '@/types/ecore'
-import type { PackageInfo } from '@/types/graph'
 
 export interface TreePackage {
   pkg: ParsedPackage
@@ -13,17 +12,6 @@ export interface TreeFile {
   model: ParsedModel
   packages: TreePackage[]
   count: number
-}
-
-export function packageInfoOf(pkg: ParsedPackage, model: ParsedModel): PackageInfo {
-  return {
-    id: pkg.id,
-    fullName: pkg.fullName,
-    nsURI: pkg.nsURI,
-    fileName: model.fileName,
-    fileKey: model.key,
-    modelIndex: model.index,
-  }
 }
 
 function filterPackage(pkg: ParsedPackage, query: string): TreePackage | null {

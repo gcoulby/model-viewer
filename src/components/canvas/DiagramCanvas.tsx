@@ -21,6 +21,7 @@ import { edgeTypes, type DiagramEdge } from './edges/edgeTypes'
 import { EmptyState } from './EmptyState'
 import { FIT_OPTIONS, MAX_ZOOM, MIN_ZOOM } from './fitOptions'
 import { nodeTypes, type CanvasNode, type DiagramNode } from './nodes/nodeTypes'
+import { ScopeBanner } from './ScopeBanner'
 import { ZoomPanel, type CanvasTool } from './ZoomPanel'
 
 const FADE = 'transition-opacity duration-150 motion-reduce:transition-none'
@@ -214,6 +215,7 @@ export function DiagramCanvas() {
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--grid)" />
         <ZoomPanel tool={tool} onToolChange={setTool} />
+        <ScopeBanner />
       </ReactFlow>
       {!graph && <EmptyState dropping={dropping} />}
       {dropping && graph && <DropOverlay />}

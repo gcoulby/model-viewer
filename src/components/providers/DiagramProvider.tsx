@@ -3,6 +3,7 @@ import { edgeTypeFor, type DiagramEdge } from '@/components/canvas/edges/edgeTyp
 import { nodeTypeFor, type DiagramNode } from '@/components/canvas/nodes/nodeTypes'
 import { DiagramContext } from '@/contexts/diagram-context'
 import { useModels } from '@/hooks/useModels'
+import { useScope } from '@/hooks/useScope'
 import { useViewOptions } from '@/hooks/useViewOptions'
 import { buildGraph } from '@/lib/ecore/buildGraph'
 import { edgeTitle } from '@/lib/ecore/edgeStyle'
@@ -41,13 +42,17 @@ function useFontsReady(): boolean {
 export function DiagramProvider({ children }: { children: ReactNode }) {
   const { models, links } = useModels()
   const { options } = useViewOptions()
+  const { focus, hidden } = useScope()
   const fontsReady = useFontsReady()
   const measure = useMemo(createTextMeasurer, [])
   const [relayoutCount, setRelayoutCount] = useState(0)
   const [collapsedState, setCollapsedState] = useState<CollapsedState>({ layout: null, ids: new Set() })
 
   const graph = useMemo(() => (models.length ? buildGraph(models, links) : null), [models, links])
-  const visible = useMemo(() => (graph ? computeVisible(graph, options) : null), [graph, options])
+  const visible = useMemo(
+    () => (graph ? computeVisible(graph, options, { focus, hidden }) : null),
+    [graph, options, focus, hidden],
+  )
 
   // Layout is recomputed whenever the graph, a view option, the direction or a re-layout request changes.
   const layout = useMemo<Layout | null>(() => {

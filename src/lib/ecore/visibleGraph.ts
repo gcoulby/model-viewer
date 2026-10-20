@@ -1,5 +1,6 @@
 import type { EdgeKind, GraphEdge, GraphNode, ModelGraph, ParallelInfo } from '@/types/graph'
 import type { ViewOptions } from '@/types/view'
+import { NO_SCOPE, type Scope } from './scope'
 
 export interface VisibleGraph {
   nodes: GraphNode[]
@@ -32,8 +33,35 @@ export function edgeKindVisible(kind: EdgeKind, options: ViewOptions): boolean {
   }
 }
 
-export function computeVisible(graph: ModelGraph, options: ViewOptions): VisibleGraph {
-  const nodes = [...graph.nodes.values()].filter((n) => nodeVisible(n, options))
+function inFocus(node: GraphNode, scope: Scope): boolean {
+  return node.kind !== 'external' && !!scope.focus?.ids.has(node.package.scopeId)
+}
+
+function isHidden(node: GraphNode, scope: Scope): boolean {
+  return node.kind !== 'external' && scope.hidden.has(node.package.scopeId)
+}
+
+/**
+ * The nodes and edges to draw. A focus keeps the focused packages and the externals they use, plus the
+ * types in other packages they link to when `includeLinked` is on; hidden packages are removed after that.
+ */
+export function computeVisible(graph: ModelGraph, options: ViewOptions, scope: Scope = NO_SCOPE): VisibleGraph {
+  let candidates = [...graph.nodes.values()]
+  const focus = scope.focus
+  if (focus) {
+    const core = new Set(candidates.filter((n) => inFocus(n, scope)).map((n) => n.id))
+    const keep = new Set(core)
+    for (const e of graph.edges) {
+      if (!edgeKindVisible(e.kind, options)) continue
+      for (const [inside, outside] of [[e.from, e.to], [e.to, e.from]] as const) {
+        if (!core.has(inside)) continue
+        const other = graph.nodes.get(outside)
+        if (other && (other.kind === 'external' || focus.includeLinked)) keep.add(outside)
+      }
+    }
+    candidates = candidates.filter((n) => keep.has(n.id))
+  }
+  const nodes = candidates.filter((n) => nodeVisible(n, options) && !isHidden(n, scope))
   const nodeIds = new Set(nodes.map((n) => n.id))
   const edges = graph.edges.filter(
     (e) => nodeIds.has(e.from) && nodeIds.has(e.to) && edgeKindVisible(e.kind, options),

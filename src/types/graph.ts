@@ -37,6 +37,8 @@ export interface PackageInfo {
   fileName: string
   /** `ParsedModel.key` of the file the package is in. */
   fileKey: string
+  /** Names the package for hiding and focusing; see `scopeIdOf`. */
+  scopeId: string
   modelIndex: number
 }
 

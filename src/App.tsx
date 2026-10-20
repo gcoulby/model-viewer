@@ -4,6 +4,7 @@ import { DiagramProvider } from '@/components/providers/DiagramProvider'
 import { FileColorsProvider } from '@/components/providers/FileColorsProvider'
 import { ModelsProvider } from '@/components/providers/ModelsProvider'
 import { PasteDialogProvider } from '@/components/providers/PasteDialogProvider'
+import { ScopeProvider } from '@/components/providers/ScopeProvider'
 import { SelectionProvider } from '@/components/providers/SelectionProvider'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { ViewOptionsProvider } from '@/components/providers/ViewOptionsProvider'
@@ -18,6 +19,7 @@ export default function App() {
         <ModelsProvider>
           <ViewOptionsProvider>
             <SelectionProvider>
+              <ScopeProvider>
               <DiagramProvider>
                 <PasteDialogProvider>
                   <ReactFlowProvider>
@@ -25,6 +27,7 @@ export default function App() {
                   </ReactFlowProvider>
                 </PasteDialogProvider>
               </DiagramProvider>
+              </ScopeProvider>
             </SelectionProvider>
           </ViewOptionsProvider>
         </ModelsProvider>
