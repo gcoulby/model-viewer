@@ -142,3 +142,9 @@
     color-scheme: dark;
   }
 }
+
+/* The sidebar width follows the pointer while it is being resized, so it must not animate. */
+[data-slot="sidebar-gap"],
+[data-slot="sidebar-container"] {
+  transition: none !important;
+}
