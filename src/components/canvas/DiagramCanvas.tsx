@@ -215,8 +215,8 @@ export function DiagramCanvas() {
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--grid)" />
         <ZoomPanel tool={tool} onToolChange={setTool} />
       </ReactFlow>
-      {!graph && <EmptyState />}
-      {dropping && <DropOverlay />}
+      {!graph && <EmptyState dropping={dropping} />}
+      {dropping && graph && <DropOverlay />}
     </section>
   )
 }
