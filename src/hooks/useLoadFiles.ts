@@ -4,6 +4,7 @@ import type { Sample } from '@/data/samples'
 import type { AddResult } from '@/contexts/models-context'
 import { useModels } from '@/hooks/useModels'
 import { readDropped, type SourceFile } from '@/lib/readFolder'
+import { isZip, readZip } from '@/lib/readZip'
 
 const ERROR_TOAST_MS = 7000
 
@@ -18,7 +19,22 @@ export function useLoadFiles() {
   const { addSources, addPasted } = useModels()
 
   const loadSourceFiles = useCallback(
-    async (files: SourceFile[]): Promise<AddResult> => {
+    async (input: SourceFile[]): Promise<AddResult> => {
+      const files: SourceFile[] = []
+      for (const item of input) {
+        if (!isZip(item.path)) {
+          files.push(item)
+          continue
+        }
+        try {
+          const found = await readZip(item.file)
+          if (!found.length) toast.error(`${item.path}: no .ecore files found in this archive.`)
+          files.push(...found)
+        } catch {
+          toast.error(`${item.path}: could not be read as a zip archive.`, { duration: ERROR_TOAST_MS })
+        }
+      }
+      if (!files.length) return { added: 0, errors: [] }
       const sources = await Promise.all(files.map(async (f) => ({ name: f.path, text: await f.file.text() })))
       const result = addSources(sources)
       reportErrors(result.errors)

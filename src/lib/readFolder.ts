@@ -9,12 +9,12 @@ export interface SourceFile {
 const FOLDER_EXTENSION = /\.ecore$/i
 const SKIPPED_FOLDERS = new Set(['node_modules'])
 
-function isSkipped(path: string): boolean {
+export function isSkipped(path: string): boolean {
   return path.split('/').slice(0, -1).some((part) => part.startsWith('.') || SKIPPED_FOLDERS.has(part))
 }
 
 /** Keeps the `.ecore` files of a scanned folder, leaving out hidden and dependency folders. */
-function onlyEcore(files: SourceFile[]): SourceFile[] {
+export function onlyEcore(files: SourceFile[]): SourceFile[] {
   return files.filter((f) => FOLDER_EXTENSION.test(f.path) && !isSkipped(f.path))
 }
 

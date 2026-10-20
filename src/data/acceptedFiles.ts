@@ -1,1 +1,1 @@
-export const ACCEPTED_FILES = ['.ecore', '.xmi', '.xml', '.emf'] as const
+export const ACCEPTED_FILES = ['.ecore', '.xmi', '.xml', '.emf', '.zip'] as const
