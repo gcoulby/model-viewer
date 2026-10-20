@@ -1,16 +1,23 @@
-import { MinusIcon, PlusIcon } from 'lucide-react'
+import { HandIcon, MinusIcon, PlusIcon, SquareDashedMousePointerIcon } from 'lucide-react'
 import { Panel, useReactFlow, useStore } from '@xyflow/react'
 import { Button } from '@/components/ui/button'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useDiagram } from '@/hooks/useDiagram'
 import type { DiagramEdge } from './edges/edgeTypes'
 import { FIT_OPTIONS } from './fitOptions'
-import type { DiagramNode } from './nodes/nodeTypes'
+import type { CanvasNode } from './nodes/nodeTypes'
 
 const ZOOM_STEP = 1.25
 
-export function ZoomPanel() {
-  const { zoomTo, getZoom, fitView } = useReactFlow<DiagramNode, DiagramEdge>()
+export type CanvasTool = 'pan' | 'select'
+
+interface ZoomPanelProps {
+  tool: CanvasTool
+  onToolChange: (tool: CanvasTool) => void
+}
+
+export function ZoomPanel({ tool, onToolChange }: ZoomPanelProps) {
+  const { zoomTo, getZoom, fitView } = useReactFlow<CanvasNode, DiagramEdge>()
   const zoom = useStore((s) => s.transform[2])
   const { relayout, graph } = useDiagram()
   const isMobile = useIsMobile()
@@ -20,6 +27,26 @@ export function ZoomPanel() {
       position={isMobile ? 'top-right' : 'bottom-right'}
       className="flex items-center overflow-hidden rounded-lg border bg-card"
     >
+      <Button
+        variant={tool === 'pan' ? 'secondary' : 'ghost'}
+        size="icon"
+        aria-label="Pan tool"
+        title="Drag to pan"
+        aria-pressed={tool === 'pan'}
+        onClick={() => onToolChange('pan')}
+      >
+        <HandIcon />
+      </Button>
+      <Button
+        variant={tool === 'select' ? 'secondary' : 'ghost'}
+        size="icon"
+        aria-label="Select tool"
+        title="Drag to box-select, then drag a selected node to move them all (Shift-drag does this in pan mode)"
+        aria-pressed={tool === 'select'}
+        onClick={() => onToolChange('select')}
+      >
+        <SquareDashedMousePointerIcon />
+      </Button>
       <Button variant="ghost" size="icon" aria-label="Zoom out" onClick={() => void zoomTo(getZoom() / ZOOM_STEP)}>
         <MinusIcon />
       </Button>

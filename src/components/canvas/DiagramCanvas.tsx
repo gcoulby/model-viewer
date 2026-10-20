@@ -11,7 +11,7 @@ import { useDiagram } from '@/hooks/useDiagram'
 import { useLoadFiles } from '@/hooks/useLoadFiles'
 import { useSelection } from '@/hooks/useSelection'
 import { useTheme } from '@/hooks/useTheme'
-import { computeGroupBoxes } from '@/lib/ecore/groups'
+import { computeGroupBoxes, groupKeyOf } from '@/lib/ecore/groups'
 import { neighbourhood } from '@/lib/ecore/visibleGraph'
 import { cn } from '@/lib/utils'
 import { afterPaint } from './afterPaint'
@@ -21,10 +21,11 @@ import { edgeTypes, type DiagramEdge } from './edges/edgeTypes'
 import { EmptyState } from './EmptyState'
 import { FIT_OPTIONS, MAX_ZOOM, MIN_ZOOM } from './fitOptions'
 import { nodeTypes, type CanvasNode, type DiagramNode } from './nodes/nodeTypes'
-import { ZoomPanel } from './ZoomPanel'
+import { ZoomPanel, type CanvasTool } from './ZoomPanel'
 
 const FADE = 'transition-opacity duration-150 motion-reduce:transition-none'
 const DIMMED = `${FADE} opacity-[.16]`
+const GROUP_PREFIX = 'group|'
 const CENTRE_MIN_ZOOM = 0.5
 const CENTRE_ZOOM = 0.7
 
@@ -36,6 +37,7 @@ export function DiagramCanvas() {
   const { fitView, setCenter, getNode, getZoom } = useReactFlow<CanvasNode, DiagramEdge>()
   const [nodes, setNodes, onNodesChange] = useNodesState<DiagramNode>([])
   const [dropping, setDropping] = useState(false)
+  const [tool, setTool] = useState<CanvasTool>('pan')
   const appliedLayout = useRef<object | null>(null)
 
   // A new layout replaces dragged positions and fits the view; a collapse keeps them.
@@ -48,7 +50,12 @@ export function DiagramCanvas() {
     }
     setNodes((prev) => {
       const positions = new Map(prev.map((n) => [n.id, n.position]))
-      return layoutNodesList.map((n) => ({ ...n, position: positions.get(n.id) ?? n.position }))
+      const selected = new Set(prev.filter((n) => n.selected).map((n) => n.id))
+      return layoutNodesList.map((n) => ({
+        ...n,
+        position: positions.get(n.id) ?? n.position,
+        selected: selected.has(n.id),
+      }))
     })
   }, [layout, layoutNodesList, setNodes, fitView])
 
@@ -77,6 +84,15 @@ export function DiagramCanvas() {
     }
   }, [])
 
+  // The sidebar and the detail panel's links select without a click on the canvas, so mirror that here.
+  useEffect(() => {
+    setNodes((prev) =>
+      prev.some((n) => !!n.selected !== (n.id === selectedId))
+        ? prev.map((n) => ({ ...n, selected: n.id === selectedId }))
+        : prev,
+    )
+  }, [selectedId, setNodes])
+
   const focus = useMemo(
     () => (graph && visible && selectedId && visible.nodeIds.has(selectedId) ? neighbourhood(visible.edges, selectedId) : null),
     [graph, visible, selectedId],
@@ -92,30 +108,58 @@ export function DiagramCanvas() {
         height: n.height ?? n.data.geometry.height,
       })),
     ).map<CanvasNode>((g) => ({
-      id: `group|${g.key}`,
+      id: `${GROUP_PREFIX}${g.key}`,
       type: 'fileGroup',
       position: { x: g.x, y: g.y },
       width: g.width,
       height: g.height,
       zIndex: -1,
-      draggable: false,
+      draggable: true,
       selectable: false,
       focusable: false,
-      className: 'pointer-events-none',
+      // Only the label strip takes the pointer, so the empty inside of a box still pans and box-selects.
+      style: { pointerEvents: 'none' },
       data: { fileKey: g.key, label: g.label },
     }))
     const typed = nodes.map<CanvasNode>((n) => ({
       ...n,
-      selected: n.id === selectedId,
       className: focus && !focus.nodeIds.has(n.id) ? DIMMED : FADE,
     }))
     return [...groups, ...typed]
-  }, [nodes, selectedId, focus])
+  }, [nodes, focus])
 
   const displayEdges = useMemo<DiagramEdge[]>(
     () => edges.map((e) => ({ ...e, className: focus && !focus.edgeIds.has(e.id) ? DIMMED : FADE })),
     [edges, focus],
   )
+
+  // The file boxes are derived from their nodes, so dragging one moves the nodes inside it. Other
+  // changes to a box (size, selection) mean nothing to the state and are dropped.
+  const handleNodesChange = (changes: NodeChange<CanvasNode>[]) => {
+    const own: NodeChange<DiagramNode>[] = []
+    for (const change of changes) {
+      const isGroup = 'id' in change && change.id.startsWith(GROUP_PREFIX)
+      if (!isGroup) {
+        own.push(change as NodeChange<DiagramNode>)
+        continue
+      }
+      if (change.type !== 'position') continue
+      const box = getNode(change.id)
+      const key = change.id.slice(GROUP_PREFIX.length)
+      const members = nodes.filter((n) => groupKeyOf(n.data.node) === key)
+      const dx = change.position && box ? change.position.x - box.position.x : 0
+      const dy = change.position && box ? change.position.y - box.position.y : 0
+      for (const m of members) {
+        own.push({
+          type: 'position',
+          id: m.id,
+          dragging: change.dragging,
+          ...(change.position ? { position: { x: m.position.x + dx, y: m.position.y + dy } } : {}),
+        })
+      }
+    }
+    onNodesChange(own)
+  }
 
   const onDragOver = (event: DragEvent) => {
     event.preventDefault()
@@ -144,11 +188,15 @@ export function DiagramCanvas() {
         edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        // Changes to the file boxes are ignored: they are derived, so the state holds no node with their ids.
-        onNodesChange={(changes) => onNodesChange(changes as NodeChange<DiagramNode>[])}
-        onNodeClick={(_, node) => {
-          if (node.type !== 'fileGroup') select(node.id)
+        onNodesChange={handleNodesChange}
+        onNodeClick={(event, node) => {
+          // A modifier click is adding to the selection, which the detail panel cannot show.
+          if (node.type !== 'fileGroup' && !event.metaKey && !event.ctrlKey && !event.shiftKey) select(node.id)
         }}
+        onSelectionStart={clear}
+        elementsSelectable
+        selectionOnDrag={tool === 'select'}
+        panOnDrag={tool === 'select' ? [1, 2] : true}
         onNodeDoubleClick={(_, node) => {
           if (node.type !== 'fileGroup' && node.data.node.kind !== 'external') toggleCollapsed(node.id)
         }}
@@ -157,7 +205,6 @@ export function DiagramCanvas() {
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         nodesConnectable={false}
-        elementsSelectable={false}
         nodeDragThreshold={4}
         nodeClickDistance={4}
         paneClickDistance={4}
@@ -166,7 +213,7 @@ export function DiagramCanvas() {
         className="!bg-background"
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--grid)" />
-        <ZoomPanel />
+        <ZoomPanel tool={tool} onToolChange={setTool} />
       </ReactFlow>
       {!graph && <EmptyState />}
       {dropping && <DropOverlay />}

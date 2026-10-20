@@ -25,6 +25,8 @@ export interface ExportColors {
   muted: string
   edge: string
   halo: string
+  /** Outline colour for `focusId`; falls back to the node's own stroke. */
+  selection?: string
 }
 
 export interface ExportInput {
@@ -33,6 +35,12 @@ export interface ExportInput {
   dark: boolean
   hueFor: HueFor
   colors: ExportColors
+  /** Node drawn with a heavier outline. */
+  focusId?: string
+  /** Adds `data-node-id` to each node so a host page can make them clickable. */
+  nodeIds?: boolean
+  /** Sizes the SVG to its container (width 100%) instead of fixed pixels. */
+  fluid?: boolean
 }
 
 export interface DiagramSvg {
@@ -98,13 +106,20 @@ function groupSvg(g: GroupBox, dark: boolean, hueFor: HueFor): string {
   return `<g transform="translate(${round(g.x)},${round(g.y)})"><rect width="${round(g.width)}" height="${round(g.height)}" rx="12" fill="${paint.fill}" stroke="${paint.stroke}" stroke-width="1.5" stroke-dasharray="6 4"/><text x="14" y="22" font-size="12.5" font-weight="500" font-family="${FONT_MONO}" fill="${paint.label}">${escapeXml(g.label)}</text></g>`
 }
 
-function nodeSvg({ node, geometry, x, y }: ExportNode, dark: boolean, hueFor: HueFor, c: ExportColors): string {
+function nodeSvg(
+  { node, geometry, x, y }: ExportNode,
+  dark: boolean,
+  hueFor: HueFor,
+  c: ExportColors,
+  focus: boolean,
+  withId: boolean,
+): string {
   const { width: w, height: h, headerHeight: hh, stereotype, compartments } = geometry
   const paint = paintForNode(node, dark, hueFor)
   const dash = node.kind === 'external' ? ' stroke-dasharray="5 4"' : ''
   const italic = node.kind === 'class' && node.abstract ? ' font-style="italic"' : ''
   const parts: string[] = [
-    `<rect width="${w}" height="${h}" rx="${CORNER}" fill="${c.node}" stroke="${paint.stroke}" stroke-width="1.2"${dash}/>`,
+    `<rect width="${w}" height="${h}" rx="${CORNER}" fill="${c.node}" stroke="${focus ? (c.selection ?? paint.stroke) : paint.stroke}" stroke-width="${focus ? 2.6 : 1.2}"${dash}/>`,
     `<path d="M0 ${hh}V${CORNER}Q0 0 ${CORNER} 0H${w - CORNER}Q${w} 0 ${w} ${CORNER}V${hh}Z" fill="${paint.header}" stroke="${paint.stroke}" stroke-width="1.2"/>`,
   ]
   if (stereotype) {
@@ -127,7 +142,8 @@ function nodeSvg({ node, geometry, x, y }: ExportNode, dark: boolean, hueFor: Hu
     })
     top += rows.length * ROW_HEIGHT + 10
   }
-  return `<g transform="translate(${round(x)},${round(y)})">${parts.join('')}</g>`
+  const id = withId ? ` data-node-id="${escapeXml(node.id)}" style="cursor:pointer"` : ''
+  return `<g${id} transform="translate(${round(x)},${round(y)})">${parts.join('')}</g>`
 }
 
 /** Serialises the whole diagram, whatever the current viewport shows, with no dimming or selection styling. */
@@ -163,10 +179,11 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
     `<g transform="translate(${round(PADDING - minX)} ${round(PADDING - minY)})">`,
     ...groups.map((g) => groupSvg(g, input.dark, input.hueFor)),
     ...input.edges.map((e) => edgeSvg(e, boxes, c)),
-    ...input.nodes.map((n) => nodeSvg(n, input.dark, input.hueFor, c)),
+    ...input.nodes.map((n) => nodeSvg(n, input.dark, input.hueFor, c, n.node.id === input.focusId, !!input.nodeIds)),
     '</g>',
   ].join('\n')
-  const text = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">\n${body}\n</svg>`
+  const size = input.fluid ? 'style="width:100%;height:auto"' : `width="${width}" height="${height}"`
+  const text = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" ${size} viewBox="0 0 ${width} ${height}">\n${body}\n</svg>`
   return { text, width, height }
 }
 

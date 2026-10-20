@@ -7,6 +7,7 @@ import { DetailHeader } from './DetailHeader'
 import { DetailSection } from './DetailSection'
 import { ExternalLinkSelect } from './ExternalLinkSelect'
 import { FeatureList } from './FeatureList'
+import { NeighbourhoodDiagram } from './NeighbourhoodDiagram'
 import { InheritedFeatures } from './InheritedFeatures'
 
 interface DetailContentProps {
@@ -44,6 +45,7 @@ export function DetailContent({ graph, node, onClose }: DetailContentProps) {
           )}
         </div>
       )}
+      <NeighbourhoodDiagram node={node} />
       {supertypes.length > 0 && (
         <DetailSection title="Supertypes" count={supertypes.length}>
           <ClassifierChips nodes={supertypes} />

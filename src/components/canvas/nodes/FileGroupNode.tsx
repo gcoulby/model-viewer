@@ -22,7 +22,7 @@ export function FileGroupNodeView({ data, width, height }: NodeProps<FileGroupNo
       style={{ width, height, background: paint.fill, borderColor: paint.stroke }}
     >
       <span
-        className="block truncate px-3.5 pt-2.5 font-mono text-[12.5px] font-medium"
+        className="pointer-events-auto block h-[30px] cursor-grab truncate px-3.5 pt-2.5 font-mono text-[12.5px] font-medium active:cursor-grabbing"
         style={{ color: paint.label }}
       >
         {data.label}

@@ -8,28 +8,15 @@ import { useDiagram } from '@/hooks/useDiagram'
 import { useModels } from '@/hooks/useModels'
 import { useTheme } from '@/hooks/useTheme'
 import { downloadBlob } from '@/lib/download'
+import { readExportColors } from '@/lib/ecore/exportColors'
 import {
   buildDiagramSvg,
   pngScale,
   type DiagramSvg,
-  type ExportColors,
 } from '@/lib/ecore/export'
 import { computeParallel } from '@/lib/ecore/visibleGraph'
 
 export type ExportFormat = 'svg' | 'png'
-
-function readColors(): ExportColors {
-  const style = getComputedStyle(document.documentElement)
-  const read = (name: string) => style.getPropertyValue(name).trim()
-  return {
-    background: read('--background'),
-    node: read('--node'),
-    ink: read('--foreground'),
-    muted: read('--muted-foreground'),
-    edge: read('--edge'),
-    halo: read('--halo'),
-  }
-}
 
 function renderPng(svg: DiagramSvg): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -73,7 +60,7 @@ export function useDiagramExport() {
         const info = parallel.get(edge.id)
         return info ? [{ edge, parallel: info }] : []
       })
-      const svg = buildDiagramSvg({ nodes, edges, dark: theme === 'dark', hueFor, colors: readColors() })
+      const svg = buildDiagramSvg({ nodes, edges, dark: theme === 'dark', hueFor, colors: readExportColors() })
       if (!svg) return
 
       const first = models[0]
