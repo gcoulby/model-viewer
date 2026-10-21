@@ -1,10 +1,11 @@
 import type { GraphEdge, GraphNode, ParallelInfo } from '@/types/graph'
-import type { NodeGeometry } from '@/types/view'
-import { computeEdgePath, type Box } from './edgeGeometry'
+import type { EdgeRouting, LayoutDirection, LayoutGrouping, NodeGeometry } from '@/types/view'
+import type { Box, EdgePath } from './edgeGeometry'
 import { edgeLabels, edgeStyleFor, type MarkerKind } from './edgeStyle'
 import { ROW_HEIGHT } from './measure'
-import { computeGroupBoxes, EXTERNAL_GROUP, type GroupBox } from './groups'
+import { computeGroupBoxes, type GroupBox } from './groups'
 import { groupPaint, paintForNode, type HueFor } from './paint'
+import { routeEdges, type LaidOutRoutes } from './routing'
 
 export interface ExportNode {
   node: GraphNode
@@ -41,6 +42,14 @@ export interface ExportInput {
   nodeIds?: boolean
   /** Sizes the SVG to its container (width 100%) instead of fixed pixels. */
   fluid?: boolean
+  /** Frames drawn behind the nodes; defaults to one per file. */
+  grouping?: LayoutGrouping
+  routing?: EdgeRouting
+  direction?: LayoutDirection
+  /** The layout's own routes, used by `routed` while both ends of an edge are where the layout put them. */
+  laidOut?: LaidOutRoutes
+  /** Draws the feature names at the ends of links; on by default. */
+  labels?: boolean
 }
 
 export interface DiagramSvg {
@@ -71,16 +80,9 @@ function markerDefs(c: ExportColors): string {
 
 const markerRef = (kind: MarkerKind) => `url(#m-${kind})`
 
-function edgeSvg(
-  { edge, parallel }: ExportEdge,
-  boxes: Map<string, Box>,
-  c: ExportColors,
-): string {
-  const from = boxes.get(edge.from)
-  const to = boxes.get(edge.to)
-  if (!from || !to) return ''
+function edgeSvg({ edge }: ExportEdge, path: EdgePath | undefined, c: ExportColors, withLabels: boolean): string {
+  if (!path) return ''
   const style = edgeStyleFor(edge)
-  const path = computeEdgePath(from, to, parallel, edge.from === edge.to)
   const attrs = [
     `d="${path.d}"`,
     'fill="none"',
@@ -92,7 +94,7 @@ function edgeSvg(
   ]
     .filter(Boolean)
     .join(' ')
-  const labels = edgeLabels(edge, path)
+  const labels = (withLabels ? edgeLabels(edge, path) : [])
     .map(
       (l) =>
         `<text x="${l.placement.x}" y="${l.placement.y}" text-anchor="${l.placement.anchor}" font-size="${l.fontSize}" font-family="${FONT_UI}" fill="${c.ink}" stroke="${c.halo}" stroke-width="4" paint-order="stroke" stroke-linejoin="round" dominant-baseline="central">${escapeXml(l.text)}</text>`,
@@ -102,7 +104,7 @@ function edgeSvg(
 }
 
 function groupSvg(g: GroupBox, dark: boolean, hueFor: HueFor): string {
-  const paint = groupPaint(g.key === EXTERNAL_GROUP ? null : hueFor(g.key), dark)
+  const paint = groupPaint(g.hueKey === null ? null : hueFor(g.hueKey), dark)
   return `<g transform="translate(${round(g.x)},${round(g.y)})"><rect width="${round(g.width)}" height="${round(g.height)}" rx="12" fill="${paint.fill}" stroke="${paint.stroke}" stroke-width="1.5" stroke-dasharray="6 4"/><text x="14" y="22" font-size="12.5" font-weight="500" font-family="${FONT_MONO}" fill="${paint.label}">${escapeXml(g.label)}</text></g>`
 }
 
@@ -156,6 +158,7 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
   let maxY = -Infinity
   const groups = computeGroupBoxes(
     input.nodes.map((n) => ({ node: n.node, x: n.x, y: n.y, width: n.geometry.width, height: n.geometry.height })),
+    input.grouping ?? 'file',
   )
   for (const g of groups) {
     minX = Math.min(minX, g.x)
@@ -170,6 +173,15 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
     maxX = Math.max(maxX, n.x + n.geometry.width)
     maxY = Math.max(maxY, n.y + n.geometry.height)
   }
+  const paths = routeEdges(boxes, input.edges, input.routing ?? 'straight', input.direction ?? 'TB', input.laidOut)
+  for (const path of paths.values()) {
+    for (const p of [path.start, path.end]) {
+      minX = Math.min(minX, p.x)
+      minY = Math.min(minY, p.y)
+      maxX = Math.max(maxX, p.x)
+      maxY = Math.max(maxY, p.y)
+    }
+  }
   const width = Math.ceil(maxX - minX + PADDING * 2)
   const height = Math.ceil(maxY - minY + PADDING * 2)
   const c = input.colors
@@ -178,7 +190,7 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
     `<rect width="${width}" height="${height}" fill="${c.background}"/>`,
     `<g transform="translate(${round(PADDING - minX)} ${round(PADDING - minY)})">`,
     ...groups.map((g) => groupSvg(g, input.dark, input.hueFor)),
-    ...input.edges.map((e) => edgeSvg(e, boxes, c)),
+    ...input.edges.map((e) => edgeSvg(e, paths.get(e.edge.id), c, input.labels ?? true)),
     ...input.nodes.map((n) => nodeSvg(n, input.dark, input.hueFor, c, n.node.id === input.focusId, !!input.nodeIds)),
     '</g>',
   ].join('\n')

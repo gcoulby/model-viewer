@@ -1,22 +1,37 @@
 import type { GraphNode } from '@/types/graph'
+import type { LayoutGrouping } from '@/types/view'
 
 export const EXTERNAL_GROUP = '~external'
 export const GROUP_PADDING = 28
 export const GROUP_LABEL_HEIGHT = 30
 
-export function groupKeyOf(node: GraphNode): string {
-  return node.kind === 'external' ? EXTERNAL_GROUP : node.package.fileKey
+/** The frame a node belongs to, or null when nodes are not grouped. */
+export function groupKeyOf(node: GraphNode, grouping: LayoutGrouping): string | null {
+  if (grouping === 'none') return null
+  if (node.kind === 'external') return EXTERNAL_GROUP
+  return grouping === 'file' ? node.package.fileKey : node.package.id
 }
 
-export function groupLabelOf(node: GraphNode): string {
-  return node.kind === 'external' ? 'External' : node.package.fileName
+export function groupLabelOf(node: GraphNode, grouping: LayoutGrouping): string {
+  if (node.kind === 'external') return 'External'
+  return grouping === 'package' ? node.package.fullName : node.package.fileName
 }
 
-/** Files are only boxed apart once there is more than one of them on the diagram. */
-export function groupingActive(nodes: GraphNode[]): boolean {
-  const files = new Set<string>()
-  for (const node of nodes) if (node.kind !== 'external') files.add(node.package.fileKey)
-  return files.size > 1
+/** The file whose colour tints the frame, or null for the externals frame. */
+export function groupHueKeyOf(node: GraphNode): string | null {
+  return node.kind === 'external' ? null : node.package.fileKey
+}
+
+/** Frames are only drawn once there is more than one file or package on the diagram to tell apart. */
+export function groupingActive(nodes: GraphNode[], grouping: LayoutGrouping): boolean {
+  if (grouping === 'none') return false
+  const keys = new Set<string>()
+  for (const node of nodes) {
+    const key = node.kind === 'external' ? null : groupKeyOf(node, grouping)
+    if (key) keys.add(key)
+    if (keys.size > 1) return true
+  }
+  return false
 }
 
 export interface PlacedNode {
@@ -28,24 +43,36 @@ export interface PlacedNode {
 }
 
 export interface GroupBox {
-  /** A file key, or `EXTERNAL_GROUP`. */
+  /** A file key, a package id, or `EXTERNAL_GROUP`. */
   key: string
   label: string
+  hueKey: string | null
   x: number
   y: number
   width: number
   height: number
 }
 
-/** One padded box per file around the nodes currently placed in it. */
-export function computeGroupBoxes(placed: PlacedNode[]): GroupBox[] {
-  if (!groupingActive(placed.map((p) => p.node))) return []
+/** One padded frame per file or package around the nodes currently placed in it. */
+export function computeGroupBoxes(placed: PlacedNode[], grouping: LayoutGrouping): GroupBox[] {
+  if (!groupingActive(placed.map((p) => p.node), grouping)) return []
   const bounds = new Map<string, GroupBox & { maxX: number; maxY: number }>()
   for (const { node, x, y, width, height } of placed) {
-    const key = groupKeyOf(node)
+    const key = groupKeyOf(node, grouping)
+    if (!key) continue
     const box = bounds.get(key)
     if (!box) {
-      bounds.set(key, { key, label: groupLabelOf(node), x, y, width: 0, height: 0, maxX: x + width, maxY: y + height })
+      bounds.set(key, {
+        key,
+        label: groupLabelOf(node, grouping),
+        hueKey: groupHueKeyOf(node),
+        x,
+        y,
+        width: 0,
+        height: 0,
+        maxX: x + width,
+        maxY: y + height,
+      })
     } else {
       box.x = Math.min(box.x, x)
       box.y = Math.min(box.y, y)
@@ -56,6 +83,7 @@ export function computeGroupBoxes(placed: PlacedNode[]): GroupBox[] {
   return [...bounds.values()].map((b) => ({
     key: b.key,
     label: b.label,
+    hueKey: b.hueKey,
     x: b.x - GROUP_PADDING,
     y: b.y - GROUP_PADDING - GROUP_LABEL_HEIGHT,
     width: b.maxX - b.x + GROUP_PADDING * 2,

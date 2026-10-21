@@ -11,7 +11,10 @@ import { useDiagram } from '@/hooks/useDiagram'
 import { useLoadFiles } from '@/hooks/useLoadFiles'
 import { useSelection } from '@/hooks/useSelection'
 import { useTheme } from '@/hooks/useTheme'
+import { useViewOptions } from '@/hooks/useViewOptions'
+import type { Box } from '@/lib/ecore/edgeGeometry'
 import { computeGroupBoxes, groupKeyOf } from '@/lib/ecore/groups'
+import { routeEdges } from '@/lib/ecore/routing'
 import { neighbourhood } from '@/lib/ecore/visibleGraph'
 import { cn } from '@/lib/utils'
 import { afterPaint } from './afterPaint'
@@ -32,7 +35,8 @@ const CENTRE_ZOOM = 0.7
 
 export function DiagramCanvas() {
   const { theme } = useTheme()
-  const { graph, visible, layout, nodes: layoutNodesList, edges, toggleCollapsed } = useDiagram()
+  const { graph, visible, layout, nodes: layoutNodesList, edges, shapingEdgeIds, toggleCollapsed } = useDiagram()
+  const { options, display } = useViewOptions()
   const { selectedId, centerRequest, select, clear } = useSelection()
   const { loadDropped } = useLoadFiles()
   const { fitView, setCenter, getNode, getZoom } = useReactFlow<CanvasNode, DiagramEdge>()
@@ -108,6 +112,7 @@ export function DiagramCanvas() {
         width: n.width ?? n.data.geometry.width,
         height: n.height ?? n.data.geometry.height,
       })),
+      options.grouping,
     ).map<CanvasNode>((g) => ({
       id: `${GROUP_PREFIX}${g.key}`,
       type: 'fileGroup',
@@ -120,19 +125,50 @@ export function DiagramCanvas() {
       focusable: false,
       // Only the label strip takes the pointer, so the empty inside of a box still pans and box-selects.
       style: { pointerEvents: 'none' },
-      data: { fileKey: g.key, label: g.label },
+      data: { groupKey: g.key, hueKey: g.hueKey, label: g.label },
     }))
     const typed = nodes.map<CanvasNode>((n) => ({
       ...n,
       className: focus && !focus.nodeIds.has(n.id) ? DIMMED : FADE,
     }))
     return [...groups, ...typed]
-  }, [nodes, focus])
+  }, [nodes, focus, options.grouping])
 
-  const displayEdges = useMemo<DiagramEdge[]>(
-    () => edges.map((e) => ({ ...e, className: focus && !focus.edgeIds.has(e.id) ? DIMMED : FADE })),
-    [edges, focus],
-  )
+  // Paths follow the boxes as they are now, so they are rerouted while a box is dragged.
+  const displayEdges = useMemo<DiagramEdge[]>(() => {
+    const boxes = new Map<string, Box>(
+      nodes.map((n) => [
+        n.id,
+        {
+          x: n.position.x,
+          y: n.position.y,
+          width: n.width ?? n.data.geometry.width,
+          height: n.height ?? n.data.geometry.height,
+        },
+      ]),
+    )
+    const drawn = edges.filter(
+      (e) => display.otherLinks === 'show' || shapingEdgeIds.has(e.id) || !!focus?.edgeIds.has(e.id),
+    )
+    const paths = routeEdges(
+      boxes,
+      drawn.flatMap((e) => (e.data ? [{ edge: e.data.edge, parallel: e.data.parallel }] : [])),
+      display.routing,
+      options.direction,
+      layout?.laidOut,
+    )
+    return drawn.flatMap((e) =>
+      e.data
+        ? [
+            {
+              ...e,
+              data: { ...e.data, path: paths.get(e.id) ?? null, labels: display.labels },
+              className: focus && !focus.edgeIds.has(e.id) ? DIMMED : FADE,
+            },
+          ]
+        : [],
+    )
+  }, [nodes, edges, focus, display, shapingEdgeIds, options.direction, layout])
 
   // The file boxes are derived from their nodes, so dragging one moves the nodes inside it. Other
   // changes to a box (size, selection) mean nothing to the state and are dropped.
@@ -147,7 +183,7 @@ export function DiagramCanvas() {
       if (change.type !== 'position') continue
       const box = getNode(change.id)
       const key = change.id.slice(GROUP_PREFIX.length)
-      const members = nodes.filter((n) => groupKeyOf(n.data.node) === key)
+      const members = nodes.filter((n) => groupKeyOf(n.data.node, options.grouping) === key)
       const dx = change.position && box ? change.position.x - box.position.x : 0
       const dy = change.position && box ? change.position.y - box.position.y : 0
       for (const m of members) {

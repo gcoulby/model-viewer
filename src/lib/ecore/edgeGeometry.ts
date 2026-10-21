@@ -20,6 +20,16 @@ export interface EdgePath {
   startDirection: Point
   /** Unit direction of the path arriving at the end point. */
   endDirection: Point
+  /** Where the label at each end goes, so labels of neighbouring links on one box side do not collide. */
+  startLabel?: LabelHint
+  endLabel?: LabelHint
+}
+
+export interface LabelHint {
+  /** Points from the box centre towards this end; the label goes on that side of the line. */
+  away: Point
+  /** Extra distance along the line, to stagger labels of close neighbours. */
+  stagger: number
 }
 
 export interface LabelPlacement extends Point {
@@ -58,7 +68,7 @@ function boundaryPoint(box: Box, target: Point): Point {
   return { x: cx + dx * k, y: cy + dy * k }
 }
 
-function loopPath(box: Box, index: number): EdgePath {
+export function loopPath(box: Box, index: number): EdgePath {
   const extent = LOOP_BASE + index * LOOP_STEP
   const startX = Math.max(box.x + 10, box.x + box.width - 36)
   const endY = box.y + Math.min(26, box.height - 8)
@@ -102,8 +112,10 @@ export function computeEdgePath(from: Box, to: Box, parallel: ParallelInfo, isLo
 }
 
 /** Label position beside `point`, pushed `offset` along `direction` and off to the side of the line. */
-export function placeLabel(point: Point, direction: Point, offset: number): LabelPlacement {
-  const side = perpendicular(direction)
+export function placeLabel(point: Point, direction: Point, offset: number, hint?: LabelHint): LabelPlacement {
+  let side = perpendicular(direction)
+  if (hint && side.x * hint.away.x + side.y * hint.away.y < 0) side = { x: -side.x, y: -side.y }
+  offset += hint?.stagger ?? 0
   const x = point.x + direction.x * offset + side.x * LABEL_SIDE_OFFSET
   const y = point.y + direction.y * offset + side.y * LABEL_SIDE_OFFSET
   return { x: round(x), y: round(y), anchor: x >= point.x ? 'start' : 'end' }

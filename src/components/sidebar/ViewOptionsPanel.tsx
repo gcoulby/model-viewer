@@ -1,9 +1,6 @@
 import { ChevronRightIcon } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { VIEW_OPTIONS } from '@/data/viewOptions'
-import { DirectionToggle } from './DirectionToggle'
-import { LayoutModeSelect } from './LayoutModeSelect'
-import { SpacingToggle } from './SpacingToggle'
 import { ViewOptionCheckbox } from './ViewOptionCheckbox'
 
 export function ViewOptionsPanel() {
@@ -19,9 +16,6 @@ export function ViewOptionsPanel() {
             <ViewOptionCheckbox key={option.key} option={option} />
           ))}
         </div>
-        <LayoutModeSelect />
-        <DirectionToggle />
-        <SpacingToggle />
         <p className="mt-1.5 text-xs text-muted-foreground">
           Any change here re-runs the layout. Double-click a box to collapse it.
         </p>

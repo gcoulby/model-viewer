@@ -1,9 +1,12 @@
+import { DEFAULT_LAYOUT } from './layoutOptions'
 import type { ViewOptions } from '@/types/view'
 
-export type ToggleOptionKey = Exclude<keyof ViewOptions, 'direction' | 'layoutMode' | 'spacing'>
+export type ToggleOptionKey = {
+  [K in keyof ViewOptions]: ViewOptions[K] extends boolean ? K : never
+}[keyof ViewOptions]
 
 export interface ViewOptionDefinition {
-  key: ToggleOptionKey
+  key: Exclude<ToggleOptionKey, 'pullIn'>
   label: string
   defaultValue: boolean
 }
@@ -18,3 +21,11 @@ export const VIEW_OPTIONS: ViewOptionDefinition[] = [
   { key: 'dataTypes', label: 'Data types', defaultValue: false },
   { key: 'external', label: 'External types', defaultValue: true },
 ]
+
+export function defaultViewOptions(): ViewOptions {
+  const toggles = Object.fromEntries(VIEW_OPTIONS.map((o) => [o.key, o.defaultValue])) as Record<
+    Exclude<ToggleOptionKey, 'pullIn'>,
+    boolean
+  >
+  return { ...toggles, ...DEFAULT_LAYOUT }
+}

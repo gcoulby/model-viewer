@@ -1,4 +1,5 @@
 import type { Edge } from '@xyflow/react'
+import type { EdgePath } from '@/lib/ecore/edgeGeometry'
 import type { GraphEdge, ParallelInfo } from '@/types/graph'
 import { ContainmentEdge } from './ContainmentEdge'
 import { EnumLinkEdge } from './EnumLinkEdge'
@@ -9,6 +10,9 @@ export interface DiagramEdgeData extends Record<string, unknown> {
   edge: GraphEdge
   parallel: ParallelInfo
   title: string
+  /** Worked out by the canvas from the current box positions; nothing is drawn while it is null. */
+  path: EdgePath | null
+  labels: boolean
 }
 
 export type DiagramEdgeType = 'inheritEdge' | 'containmentEdge' | 'referenceEdge' | 'enumLinkEdge'

@@ -1,25 +1,31 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 import { edgeTypeFor, type DiagramEdge } from '@/components/canvas/edges/edgeTypes'
 import { nodeTypeFor, type DiagramNode } from '@/components/canvas/nodes/nodeTypes'
-import { DiagramContext } from '@/contexts/diagram-context'
+import { DiagramContext, type DiagramLayout } from '@/contexts/diagram-context'
 import { useModels } from '@/hooks/useModels'
 import { useScope } from '@/hooks/useScope'
 import { useViewOptions } from '@/hooks/useViewOptions'
+import { loadElk } from '@/lib/elk'
 import { buildGraph } from '@/lib/ecore/buildGraph'
+import type { Box } from '@/lib/ecore/edgeGeometry'
 import { edgeTitle } from '@/lib/ecore/edgeStyle'
-import { layoutByFile } from '@/lib/ecore/layoutGroups'
-import type { Position } from '@/lib/ecore/layout'
 import { computeGeometry, createTextMeasurer, waitForFonts } from '@/lib/ecore/measure'
-import { computeParallel, computeVisible } from '@/lib/ecore/visibleGraph'
-import type { NodeGeometry } from '@/types/view'
+import { runLayout } from '@/lib/ecore/runLayout'
+import { layoutEdges } from '@/lib/ecore/shaping'
+import { computeParallel, computeVisible, type VisibleGraph } from '@/lib/ecore/visibleGraph'
+import type { NodeGeometry, ViewOptions } from '@/types/view'
 
-interface Layout {
-  positions: Map<string, Position>
-  geometry: Map<string, NodeGeometry>
+/** A finished layout and the request it answers, so a newer request shows as pending. */
+interface LayoutState {
+  layout: DiagramLayout
+  visible: VisibleGraph
+  options: ViewOptions
+  relayoutCount: number
 }
 
 interface CollapsedState {
-  layout: Layout | null
+  layout: DiagramLayout | null
   ids: Set<string>
 }
 
@@ -46,6 +52,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
   const fontsReady = useFontsReady()
   const measure = useMemo(createTextMeasurer, [])
   const [relayoutCount, setRelayoutCount] = useState(0)
+  const [layoutState, setLayoutState] = useState<LayoutState | null>(null)
   const [collapsedState, setCollapsedState] = useState<CollapsedState>({ layout: null, ids: new Set() })
 
   const graph = useMemo(() => (models.length ? buildGraph(models, links) : null), [models, links])
@@ -54,22 +61,41 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     [graph, options, focus, hidden],
   )
 
-  // Layout is recomputed whenever the graph, a view option, the direction or a re-layout request changes.
-  const layout = useMemo<Layout | null>(() => {
-    void relayoutCount
-    if (!visible || !fontsReady) return null
+  // Layout reruns whenever the graph, a view option or a re-layout request changes. Layouts can run in a
+  // worker, so a result that arrives after a newer request is dropped.
+  useEffect(() => {
+    if (!visible || !fontsReady) return
+    let active = true
     const geometry = new Map<string, NodeGeometry>()
     for (const node of visible.nodes) geometry.set(node.id, computeGeometry(node, options, false, measure))
-    const positions = layoutByFile(
-      visible.nodes,
-      visible.edges,
-      geometry,
-      options.direction,
-      options.layoutMode,
-      options.spacing,
-    )
-    return { positions, geometry }
+    void runLayout(visible.nodes, visible.edges, geometry, options, loadElk).then(({ result, failure }) => {
+      if (!active) return
+      if (failure) toast.error(`That layout failed, so the classic layered layout is shown instead (${failure}).`)
+      const boxes = new Map<string, Box>()
+      result.positions.forEach((p, id) => {
+        const geo = geometry.get(id)
+        if (geo) boxes.set(id, { x: p.x, y: p.y, width: geo.width, height: geo.height })
+      })
+      setLayoutState({
+        layout: { positions: result.positions, geometry, laidOut: { routes: result.routes, boxes } },
+        visible,
+        options,
+        relayoutCount,
+      })
+    })
+    return () => {
+      active = false
+    }
   }, [visible, options, fontsReady, measure, relayoutCount])
+
+  // The last layout stays on screen while a newer one is worked out; with nothing visible there is none.
+  const layout = visible && fontsReady ? (layoutState?.layout ?? null) : null
+  const layoutPending =
+    !!visible &&
+    (!layoutState ||
+      layoutState.visible !== visible ||
+      layoutState.options !== options ||
+      layoutState.relayoutCount !== relayoutCount)
 
   const collapsedIds = collapsedState.layout === layout ? collapsedState.ids : NO_COLLAPSED
 
@@ -106,6 +132,11 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     })
   }, [visible, layout, collapsedIds, options, measure])
 
+  const shapingEdgeIds = useMemo<ReadonlySet<string>>(
+    () => new Set(visible ? layoutEdges(visible.nodes, visible.edges, options).map((e) => e.id) : []),
+    [visible, options],
+  )
+
   const edges = useMemo<DiagramEdge[]>(() => {
     if (!visible || !graph) return []
     const parallel = computeParallel(visible.edges)
@@ -121,15 +152,26 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
           target: edge.to,
           selectable: false,
           focusable: false,
-          data: { edge, parallel: info, title: edgeTitle(edge, nameOf) },
+          data: { edge, parallel: info, title: edgeTitle(edge, nameOf), path: null, labels: true },
         },
       ]
     })
   }, [visible, graph])
 
   const value = useMemo(
-    () => ({ graph, visible, layout, nodes, edges, collapsedIds, toggleCollapsed, relayout }),
-    [graph, visible, layout, nodes, edges, collapsedIds, toggleCollapsed, relayout],
+    () => ({
+      graph,
+      visible,
+      layout,
+      layoutPending,
+      nodes,
+      edges,
+      shapingEdgeIds,
+      collapsedIds,
+      toggleCollapsed,
+      relayout,
+    }),
+    [graph, visible, layout, layoutPending, nodes, edges, shapingEdgeIds, collapsedIds, toggleCollapsed, relayout],
   )
   return <DiagramContext.Provider value={value}>{children}</DiagramContext.Provider>
 }

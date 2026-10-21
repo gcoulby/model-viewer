@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { buildGraph } from '../buildGraph'
-import { layoutByFile } from '../layoutGroups'
-import { VIEW_OPTIONS, type ToggleOptionKey } from '@/data/viewOptions'
+import { layoutWithDagre } from '../layoutGroups'
+import { defaultViewOptions } from '@/data/viewOptions'
 import { fileScopeIds, type Scope } from '../scope'
 import { computeVisible } from '../visibleGraph'
 import { normalisePath, resolveRelative } from '../paths'
@@ -62,7 +62,7 @@ describe('relative references', () => {
   })
 })
 
-describe('layoutByFile', () => {
+describe('layoutWithDagre', () => {
   it('keeps each file in its own block', () => {
     const a = parseModel(pkg('a', cls('A1') + cls('A2')), 'a.ecore', 0)
     const b = parseModel(pkg('b', cls('B1') + cls('B2')), 'b.ecore', 1)
@@ -71,7 +71,7 @@ describe('layoutByFile', () => {
     const geometry = new Map<string, NodeGeometry>(
       nodes.map((n) => [n.id, { width: 100, height: 50, headerHeight: 30, stereotype: '', compartments: [], collapsed: false }]),
     )
-    const positions = layoutByFile(nodes, graph.edges, geometry, 'TB')
+    const { positions } = layoutWithDagre(nodes, graph.edges, geometry, { ...defaultViewOptions(), algorithm: 'dagre' })
     const xs = (file: string) =>
       nodes.filter((n) => n.kind !== 'external' && n.package.fileName === file).map((n) => positions.get(n.id)?.x ?? NaN)
     const [aMax, bMin] = [Math.max(...xs('a.ecore')) + 100, Math.min(...xs('b.ecore'))]
@@ -83,12 +83,7 @@ describe('layoutByFile', () => {
 })
 
 describe('computeVisible scope', () => {
-  const opts = {
-    ...(Object.fromEntries(VIEW_OPTIONS.map((o) => [o.key, o.defaultValue])) as Record<ToggleOptionKey, boolean>),
-    direction: 'TB' as const,
-    layoutMode: 'layered' as const,
-    spacing: 'normal' as const,
-  }
+  const opts = defaultViewOptions()
   const a = parseModel(pkg('a', cls('Base') + cls('Lonely')), 'a.ecore', 0)
   const b = parseModel(pkg('b', cls('Child', 'a.ecore#//Base') + cls('Other')), 'b.ecore', 1)
   const graph = buildGraph([a, b])

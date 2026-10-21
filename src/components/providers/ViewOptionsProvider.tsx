@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ViewOptionsContext } from '@/contexts/view-options-context'
-import { VIEW_OPTIONS, type ToggleOptionKey } from '@/data/viewOptions'
+import { DEFAULT_EDGE_DISPLAY } from '@/data/layoutOptions'
+import { defaultViewOptions, type ToggleOptionKey } from '@/data/viewOptions'
 import type { GraphNode } from '@/types/graph'
-import type { LayoutDirection, LayoutMode, LayoutSpacing, ViewOptions } from '@/types/view'
+import type { EdgeDisplay, LayoutSettings, ViewOptions } from '@/types/view'
 
 const HIDING_OPTION: Partial<Record<GraphNode['kind'], ToggleOptionKey>> = {
   enum: 'enums',
@@ -10,28 +11,20 @@ const HIDING_OPTION: Partial<Record<GraphNode['kind'], ToggleOptionKey>> = {
   external: 'external',
 }
 
-function defaultOptions(): ViewOptions {
-  const toggles = Object.fromEntries(VIEW_OPTIONS.map((o) => [o.key, o.defaultValue]))
-  return { ...(toggles as Record<ToggleOptionKey, boolean>), direction: 'TB', layoutMode: 'layered', spacing: 'normal' }
-}
-
 export function ViewOptionsProvider({ children }: { children: ReactNode }) {
-  const [options, setOptions] = useState<ViewOptions>(defaultOptions)
+  const [options, setOptions] = useState<ViewOptions>(defaultViewOptions)
+  const [display, setDisplayState] = useState<EdgeDisplay>(DEFAULT_EDGE_DISPLAY)
 
   const setOption = useCallback((key: ToggleOptionKey, value: boolean) => {
     setOptions((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }))
   }, [])
 
-  const setDirection = useCallback((direction: LayoutDirection) => {
-    setOptions((prev) => (prev.direction === direction ? prev : { ...prev, direction }))
+  const setLayout = useCallback(<K extends keyof LayoutSettings>(key: K, value: LayoutSettings[K]) => {
+    setOptions((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }))
   }, [])
 
-  const setLayoutMode = useCallback((layoutMode: LayoutMode) => {
-    setOptions((prev) => (prev.layoutMode === layoutMode ? prev : { ...prev, layoutMode }))
-  }, [])
-
-  const setSpacing = useCallback((spacing: LayoutSpacing) => {
-    setOptions((prev) => (prev.spacing === spacing ? prev : { ...prev, spacing }))
+  const setDisplay = useCallback(<K extends keyof EdgeDisplay>(key: K, value: EdgeDisplay[K]) => {
+    setDisplayState((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }))
   }, [])
 
   const reveal = useCallback((kind: GraphNode['kind']) => {
@@ -40,8 +33,8 @@ export function ViewOptionsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ options, setOption, setDirection, setLayoutMode, setSpacing, reveal }),
-    [options, setOption, setDirection, setLayoutMode, setSpacing, reveal],
+    () => ({ options, display, setOption, setLayout, setDisplay, reveal }),
+    [options, display, setOption, setLayout, setDisplay, reveal],
   )
   return <ViewOptionsContext.Provider value={value}>{children}</ViewOptionsContext.Provider>
 }

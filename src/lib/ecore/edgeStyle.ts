@@ -54,7 +54,7 @@ export function edgeLabels(edge: GraphEdge, path: EdgePath): EdgeLabel[] {
     labels.push({
       text: name,
       fontSize: 10,
-      placement: placeLabel(path.end, { x: -path.endDirection.x, y: -path.endDirection.y }, 8),
+      placement: placeLabel(path.end, { x: -path.endDirection.x, y: -path.endDirection.y }, 8, path.endLabel),
     })
     return labels
   }
@@ -62,13 +62,13 @@ export function edgeLabels(edge: GraphEdge, path: EdgePath): EdgeLabel[] {
   labels.push({
     text: name + multiplicitySuffix(featureEdge.forward.feature.multiplicity),
     fontSize: 11,
-    placement: placeLabel(path.end, { x: -path.endDirection.x, y: -path.endDirection.y }, 8),
+    placement: placeLabel(path.end, { x: -path.endDirection.x, y: -path.endDirection.y }, 8, path.endLabel),
   })
   if (featureEdge.back) {
     labels.push({
       text: featureEdge.back.feature.name + multiplicitySuffix(featureEdge.back.feature.multiplicity),
       fontSize: 11,
-      placement: placeLabel(path.start, path.startDirection, edge.kind === 'containment' ? 26 : 10),
+      placement: placeLabel(path.start, path.startDirection, edge.kind === 'containment' ? 26 : 10, path.startLabel),
     })
   }
   return labels

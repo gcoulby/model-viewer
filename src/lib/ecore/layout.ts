@@ -1,11 +1,18 @@
 import dagre from '@dagrejs/dagre'
+import { spacingFactor } from '@/data/layoutOptions'
 import type { GraphEdge, GraphNode } from '@/types/graph'
-import { LAYOUT_SPACINGS } from '@/data/layoutOptions'
-import type { LayoutDirection, LayoutMode, LayoutSpacing, NodeGeometry } from '@/types/view'
+import type { LayoutSettings, NodeGeometry } from '@/types/view'
+import type { Point } from './edgeGeometry'
 
-export interface Position {
-  x: number
-  y: number
+export type Position = Point
+
+export interface LayoutResult {
+  positions: Map<string, Position>
+  /**
+   * Paths the layout engine found, keyed by edge id, running from the edge's `from` box to its `to` box.
+   * They are only valid while both boxes stay where the layout put them.
+   */
+  routes: Map<string, Point[]>
 }
 
 const NODE_SEP = 48
@@ -21,30 +28,17 @@ function packageName(node: GraphNode): string {
   return node.kind === 'external' ? '~' : node.package.fullName
 }
 
-function compareNodes(a: GraphNode, b: GraphNode): number {
+export function compareNodes(a: GraphNode, b: GraphNode): number {
   return KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.name.localeCompare(b.name)
 }
 
-function comparePackages(a: GraphNode, b: GraphNode): number {
+/** Package by package, externals last, then as `compareNodes`. */
+export function comparePackages(a: GraphNode, b: GraphNode): number {
   return (
     packageName(a).localeCompare(packageName(b)) ||
     (a.kind === 'external' ? 1 : 0) - (b.kind === 'external' ? 1 : 0) ||
     compareNodes(a, b)
   )
-}
-
-/** The edges that decide where boxes go; the rest are only drawn over the result. */
-function shapesLayout(edge: GraphEdge, mode: LayoutMode): boolean {
-  switch (mode) {
-    case 'layered':
-      return true
-    case 'structure':
-      return edge.kind === 'inherit' || edge.kind === 'containment'
-    case 'inheritance':
-      return edge.kind === 'inherit'
-    case 'grid':
-      return false
-  }
 }
 
 function placeGrid(
@@ -73,20 +67,21 @@ function placeGrid(
   }
 }
 
-/** Top-left positions for every node: connected nodes layered by dagre, the rest in a grid below. */
-export function layoutNodes(
+/**
+ * Top-left positions for every node: nodes joined by `edges` layered by dagre, the rest in a grid
+ * below. `edges` are the ones that shape the layout (see `layoutEdges`); no other edge is read.
+ */
+export function layoutDagre(
   nodes: GraphNode[],
   edges: GraphEdge[],
   geometry: Map<string, NodeGeometry>,
-  direction: LayoutDirection,
-  mode: LayoutMode = 'layered',
-  spacing: LayoutSpacing = 'normal',
-): Map<string, Position> {
+  settings: Pick<LayoutSettings, 'direction' | 'spacing' | 'algorithm'>,
+): LayoutResult {
   const positions = new Map<string, Position>()
-  const factor = LAYOUT_SPACINGS.find((s) => s.value === spacing)?.factor ?? 1
+  const routes = new Map<string, Point[]>()
+  const factor = spacingFactor(settings.spacing)
   const gridGap = GRID_GAP * factor
-  const compare = mode === 'grid' ? comparePackages : compareNodes
-  edges = edges.filter((e) => shapesLayout(e, mode))
+  const compare = settings.algorithm === 'grid' ? comparePackages : compareNodes
   const linked = new Set<string>()
   for (const e of edges) {
     linked.add(e.from)
@@ -99,41 +94,62 @@ export function layoutNodes(
   let bounds = { minX: 0, maxX: 0, maxY: 0 }
   if (connected.length) {
     try {
-      const g = new dagre.graphlib.Graph({ multigraph: true })
-      g.setGraph({ rankdir: direction, nodesep: NODE_SEP * factor, ranksep: RANK_SEP * factor, marginx: 0, marginy: 0 })
+      const g = new dagre.graphlib.Graph()
+      g.setGraph({
+        rankdir: settings.direction,
+        nodesep: NODE_SEP * factor,
+        ranksep: RANK_SEP * factor,
+        marginx: 0,
+        marginy: 0,
+      })
       g.setDefaultEdgeLabel(() => ({}))
       for (const n of connected) {
         const geo = geometry.get(n.id)
         if (geo) g.setNode(n.id, { width: geo.width, height: geo.height })
       }
-      edges.forEach((e, i) => {
-        if (e.from === e.to) return
-        if (e.kind === 'inherit') g.setEdge(e.to, e.from, { weight: 3, minlen: 1 }, `e${i}`)
-        else g.setEdge(e.from, e.to, { weight: 1, minlen: 1 }, `e${i}`)
-      })
+      // dagre fails on parallel edges between neighbouring boxes, so each pair of boxes gets one edge
+      // carrying the weight of all of them. Supertypes rank above subtypes, so inheritance runs super to sub.
+      const pairs = new Map<string, { v: string; w: string; weight: number; ids: string[] }>()
+      for (const e of edges) {
+        if (e.from === e.to || !g.hasNode(e.from) || !g.hasNode(e.to)) continue
+        const v = e.kind === 'inherit' ? e.to : e.from
+        const w = e.kind === 'inherit' ? e.from : e.to
+        const key = v < w ? `${v}\n${w}` : `${w}\n${v}`
+        const pair = pairs.get(key)
+        const weight = e.kind === 'inherit' ? 3 : 1
+        if (pair) {
+          pair.weight += weight
+          pair.ids.push(e.id)
+        } else pairs.set(key, { v, w, weight, ids: [e.id] })
+      }
+      for (const { v, w, weight } of pairs.values()) g.setEdge(v, w, { weight, minlen: 1 })
       dagre.layout(g)
       const placed = new Map<string, Position>()
-      for (const n of connected) {
-        const geo = geometry.get(n.id)
-        const p = g.node(n.id)
-        if (!geo || !p) continue
-        placed.set(n.id, { x: p.x - geo.width / 2, y: p.y - geo.height / 2 })
-      }
       let minX = Infinity
       let maxX = -Infinity
       let maxY = -Infinity
       for (const n of connected) {
         const geo = geometry.get(n.id)
-        const p = placed.get(n.id)
+        const p = g.node(n.id)
         if (!geo || !p) continue
-        minX = Math.min(minX, p.x)
-        maxX = Math.max(maxX, p.x + geo.width)
-        maxY = Math.max(maxY, p.y + geo.height)
+        const at = { x: p.x - geo.width / 2, y: p.y - geo.height / 2 }
+        placed.set(n.id, at)
+        minX = Math.min(minX, at.x)
+        maxX = Math.max(maxX, at.x + geo.width)
+        maxY = Math.max(maxY, at.y + geo.height)
       }
       if ([minX, maxX, maxY].every(Number.isFinite)) {
         placed.forEach((p, id) => positions.set(id, p))
         bounds = { minX, maxX, maxY }
         laidOut = true
+        const byId = new Map(edges.map((e) => [e.id, e]))
+        for (const { v, w, ids } of pairs.values()) {
+          const edge = ids.length === 1 ? byId.get(ids[0] ?? '') : undefined
+          const points: Point[] | undefined = edge ? g.edge(v, w)?.points : undefined
+          if (!edge || !points?.length || !points.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))) continue
+          const copy = points.map((p) => ({ x: p.x, y: p.y }))
+          routes.set(edge.id, edge.from === v ? copy : copy.reverse())
+        }
       }
     } catch {
       laidOut = false
@@ -141,11 +157,12 @@ export function layoutNodes(
   }
 
   if (!laidOut) {
+    routes.clear()
     isolated = [...nodes].sort(compare)
     placeGrid(isolated, geometry, positions, 0, 0, GRID_FALLBACK_WIDTH, gridGap)
   } else if (isolated.length) {
     const width = Math.max(GRID_MIN_WIDTH, bounds.maxX - bounds.minX)
     placeGrid(isolated, geometry, positions, bounds.minX, bounds.maxY + GRID_CLEARANCE, width, gridGap)
   }
-  return positions
+  return { positions, routes }
 }
