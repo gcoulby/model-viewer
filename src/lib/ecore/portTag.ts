@@ -3,11 +3,17 @@ import type { PortTag } from './edgeGeometry'
 import { dependencyCount } from './edgeStyle'
 
 export const PORT_FONT_SIZE = 10.5
-const HEIGHT = 16
+export const PORT_TAG_HEIGHT = 16
+const HEIGHT = PORT_TAG_HEIGHT
 const POINT = 6
 const PADDING = 7
 /** IBM Plex Mono advances 0.6em per character, so the tag width needs no measuring. */
 const CHAR_WIDTH = PORT_FONT_SIZE * 0.6
+
+/** How far a tag reaches out from the tip of its stub. */
+export function portTagLength(text: string): number {
+  return text.length * CHAR_WIDTH + PADDING * 2 + POINT
+}
 
 export interface PortTagShape {
   /** Places the tag's own frame, whose x axis runs out along the stub. */
@@ -25,7 +31,7 @@ export interface PortTagShape {
 export function portTagShape(tag: PortTag, text: string, outgoing: boolean): PortTagShape {
   const vertical = Math.abs(tag.direction.y) > Math.abs(tag.direction.x)
   const sign = vertical ? -Math.sign(tag.direction.y) || 1 : Math.sign(tag.direction.x) || 1
-  const width = text.length * CHAR_WIDTH + PADDING * 2 + POINT
+  const width = portTagLength(text)
   const h = HEIGHT / 2
   // Drawn along +x, then mirrored by `sign` so the tag always extends away from the box.
   const local = outgoing

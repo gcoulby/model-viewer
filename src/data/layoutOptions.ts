@@ -148,7 +148,13 @@ export const PORT_MODES: Choice<PortMode>[] = [
   { value: 'long', label: 'Long links', description: 'Links that cross a long way become port tags.' },
 ]
 
-export const DEFAULT_EDGE_DISPLAY: EdgeDisplay = { routing: 'routed', otherLinks: 'show', labels: true, ports: 'none' }
+export const DEFAULT_EDGE_DISPLAY: EdgeDisplay = {
+  routing: 'routed',
+  otherLinks: 'show',
+  labels: true,
+  ports: 'none',
+  portRoom: false,
+}
 
 export function spacingFactor(spacing: LayoutSpacing): number {
   return LAYOUT_SPACINGS.find((s) => s.value === spacing)?.factor ?? 1

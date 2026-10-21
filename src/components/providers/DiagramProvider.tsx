@@ -12,19 +12,23 @@ import { buildGraph } from '@/lib/ecore/buildGraph'
 import type { Box } from '@/lib/ecore/edgeGeometry'
 import { edgeTitle } from '@/lib/ecore/edgeStyle'
 import { foldPackages, type DrawnGraph } from '@/lib/ecore/fold'
-import { portedBeforeLayout } from '@/lib/ecore/ports'
+import { portedBeforeLayout, portPredicate } from '@/lib/ecore/ports'
+import { deflatePositions, inflateGeometry, portMargins, type PortRoom } from '@/lib/ecore/portRoom'
+import { portTagTexts } from '@/lib/ecore/portTag'
 import { computeGeometry, createTextMeasurer, waitForFonts } from '@/lib/ecore/measure'
 import { runLayout } from '@/lib/ecore/runLayout'
 import { layoutEdges } from '@/lib/ecore/shaping'
 import { computeParallel, computeVisible } from '@/lib/ecore/visibleGraph'
-import type { NodeGeometry, ViewOptions } from '@/types/view'
+import type { DrawnEdge } from '@/types/graph'
+import type { NodeGeometry, PortMode, ViewOptions } from '@/types/view'
 
 /** A finished layout and the request it answers, so a newer request shows as pending. */
 interface LayoutState {
   layout: DiagramLayout
   drawn: DrawnGraph
   options: ViewOptions
-  portFrames: boolean
+  portLayout: PortMode
+  portRoom: boolean
   relayoutCount: number
   portsVersion: number
   /** The links left out of this layout because they were ported. */
@@ -57,7 +61,10 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
   const { options, display } = useViewOptions()
   const { focus, hidden, folded } = useScope()
   const ports = usePorts()
-  const portFrames = display.ports === 'frames'
+  const portRoom = display.portRoom
+  // The port mode only moves boxes when it decides ports before layout, or when room is kept for long links.
+  const portLayout: PortMode =
+    display.ports === 'frames' ? 'frames' : display.ports === 'long' && portRoom ? 'long' : 'none'
   const fontsReady = useFontsReady()
   const measure = useMemo(createTextMeasurer, [])
   const [relayoutCount, setRelayoutCount] = useState(0)
@@ -77,10 +84,11 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     ported: portedBeforeLayout(
       graph.edges,
       new Map(graph.nodes.map((n) => [n.id, n])),
-      portFrames ? 'frames' : 'none',
+      portLayout === 'frames' ? 'frames' : 'none',
       options.grouping,
       ports.overrides,
     ),
+    overrides: ports.overrides,
     portsVersion: ports.version,
   }))
 
@@ -89,23 +97,65 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!drawn || !fontsReady) return
     let active = true
-    const { ported, portsVersion } = portedForLayout(drawn)
+    const { ported, overrides, portsVersion } = portedForLayout(drawn)
     const geometry = new Map<string, NodeGeometry>()
     for (const node of drawn.nodes) geometry.set(node.id, computeGeometry(node, options, false, measure))
     const edges = drawn.edges.filter((e) => !ported.has(e.id))
-    void runLayout(drawn.nodes, edges, geometry, options, loadElk).then(({ result, failure }) => {
-      if (!active) return
-      if (failure) toast.error(`That layout failed, so the classic layered layout is shown instead (${failure}).`)
+    const nodesById = new Map(drawn.nodes.map((n) => [n.id, n]))
+    const textsOf = (edge: DrawnEdge) => portTagTexts(edge, (id) => nodesById.get(id)?.name ?? '?')
+    const boxesOf = (positions: ReadonlyMap<string, { x: number; y: number }>) => {
       const boxes = new Map<string, Box>()
-      result.positions.forEach((p, id) => {
+      positions.forEach((p, id) => {
         const geo = geometry.get(id)
         if (geo) boxes.set(id, { x: p.x, y: p.y, width: geo.width, height: geo.height })
       })
+      return boxes
+    }
+
+    // Making room for tags lays the boxes out grown by the space their tags need. Long links are only known
+    // once boxes are placed, so for those a first layout finds them and a second makes room.
+    const place = async () => {
+      let outcome = await runLayout(drawn.nodes, edges, geometry, options, loadElk)
+      if (!portRoom) return { ...outcome, room: null }
+      const tagged = new Set(ported)
+      if (portLayout === 'long') {
+        const boxes = boxesOf(outcome.result.positions)
+        const isPorted = portPredicate(nodesById, 'long', options.grouping, overrides)
+        for (const edge of drawn.edges) {
+          const from = boxes.get(edge.from)
+          const to = boxes.get(edge.to)
+          if (from && to && isPorted(edge, from, to)) tagged.add(edge.id)
+        }
+      }
+      if (!tagged.size) return { ...outcome, room: null }
+      const room: PortRoom = portMargins(drawn.edges, tagged, geometry, options.direction, textsOf)
+      const grown = await runLayout(drawn.nodes, edges, inflateGeometry(geometry, room.margins), options, loadElk)
+      // Routes found for the grown boxes miss the real ones, so links at boxes with tags are drawn square.
+      const routes = new Map(grown.result.routes)
+      for (const edge of edges) {
+        if (room.margins.has(edge.from) || room.margins.has(edge.to)) routes.delete(edge.id)
+      }
+      outcome = {
+        result: { positions: deflatePositions(grown.result.positions, room.margins), routes },
+        failure: grown.failure ?? outcome.failure,
+      }
+      return { ...outcome, room }
+    }
+
+    void place().then(({ result, failure, room }) => {
+      if (!active) return
+      if (failure) toast.error(`That layout failed, so the classic layered layout is shown instead (${failure}).`)
       setLayoutState({
-        layout: { positions: result.positions, geometry, laidOut: { routes: result.routes, boxes } },
+        layout: {
+          positions: result.positions,
+          geometry,
+          laidOut: { routes: result.routes, boxes: boxesOf(result.positions) },
+          room,
+        },
         drawn,
         options,
-        portFrames,
+        portLayout,
+        portRoom,
         relayoutCount,
         portsVersion,
         ported,
@@ -114,7 +164,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false
     }
-  }, [drawn, options, portFrames, fontsReady, measure, relayoutCount])
+  }, [drawn, options, portLayout, portRoom, fontsReady, measure, relayoutCount])
 
   // The last layout stays on screen while a newer one is worked out; with nothing visible there is none.
   const layout = drawn && fontsReady ? (layoutState?.layout ?? null) : null
@@ -123,7 +173,8 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     (!layoutState ||
       layoutState.drawn !== drawn ||
       layoutState.options !== options ||
-      layoutState.portFrames !== portFrames ||
+      layoutState.portLayout !== portLayout ||
+      layoutState.portRoom !== portRoom ||
       layoutState.relayoutCount !== relayoutCount)
   const layoutStale = !!layoutState && layoutState.portsVersion !== ports.version
 

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { PORT_MODES } from '@/data/layoutOptions'
 import { usePorts } from '@/hooks/usePorts'
 import { useViewOptions } from '@/hooks/useViewOptions'
+import { LabelledCheckbox } from './LabelledCheckbox'
 import { SegmentedControl } from './SegmentedControl'
 
 export function PortsControl() {
@@ -15,6 +16,14 @@ export function PortsControl() {
         choices={PORT_MODES}
         onChange={(v) => setDisplay('ports', v)}
       />
+      <div className="mt-1.5">
+        <LabelledCheckbox
+          label="Make room for tags"
+          title="Outgoing tags go on one side of each box and incoming tags on the other, and boxes are spaced so no tag covers a box or another tag."
+          checked={display.portRoom}
+          onChange={(v) => setDisplay('portRoom', v)}
+        />
+      </div>
       <p className="mt-1 text-xs text-muted-foreground">
         Click a link to port it on its own. Click a port tag to jump to the other end.
       </p>

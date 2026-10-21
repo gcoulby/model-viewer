@@ -32,7 +32,7 @@ export function LinkDetail({ graph, edge, onClose }: LinkDetailProps) {
   const fromBox = boxes?.get(edge.from)
   const toBox = boxes?.get(edge.to)
   const ported =
-    !!fromBox && !!toBox && portPredicate(drawnNodes, display.ports, options.grouping, overrides)(edge, fromBox, toBox)
+    !!fromBox && !!toBox && portPredicate(drawnNodes, display.ports, options.grouping, overrides, layout?.room)(edge, fromBox, toBox)
 
   return (
     <div>

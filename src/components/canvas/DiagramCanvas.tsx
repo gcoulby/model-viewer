@@ -122,6 +122,7 @@ export function DiagramCanvas() {
         height: n.height ?? n.data.geometry.height,
       })),
       options.grouping,
+      layout?.room?.margins,
     ).map<CanvasNode>((g) => ({
       id: `${GROUP_PREFIX}${g.key}`,
       type: 'fileGroup',
@@ -141,7 +142,7 @@ export function DiagramCanvas() {
       className: focus && !focus.nodeIds.has(n.id) ? DIMMED : FADE,
     }))
     return [...groups, ...typed]
-  }, [nodes, focus, options.grouping])
+  }, [nodes, focus, options.grouping, layout])
 
   // Paths follow the boxes as they are now, so they are rerouted while a box is dragged.
   const displayEdges = useMemo<DiagramEdge[]>(() => {
@@ -167,7 +168,8 @@ export function DiagramCanvas() {
       display.routing,
       options.direction,
       layout?.laidOut,
-      portPredicate(byId, display.ports, options.grouping, overrides),
+      portPredicate(byId, display.ports, options.grouping, overrides, layout?.room),
+      layout?.room,
     )
     return shown.flatMap((e) => {
       if (!e.data) return []

@@ -6,6 +6,7 @@ import { ROW_HEIGHT } from './measure'
 import { computeGroupBoxes, type GroupBox } from './groups'
 import { groupPaint, paintForNode, type HueFor } from './paint'
 import { PORT_FONT_SIZE, portTagShape, portTagTexts } from './portTag'
+import type { PortRoom } from './portRoom'
 import { routeEdges, type LaidOutRoutes } from './routing'
 
 export interface ExportNode {
@@ -55,6 +56,8 @@ export interface ExportInput {
   labels?: boolean
   /** Links drawn as a pair of port tags instead of a line. */
   isPorted?: (edge: DrawnEdge, from: Box, to: Box) => boolean
+  /** The space the layout kept for port tags, which puts tags on fixed sides and widens the frames. */
+  room?: PortRoom | null
 }
 
 export interface DiagramSvg {
@@ -190,6 +193,7 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
   const groups = computeGroupBoxes(
     input.nodes.map((n) => ({ node: n.node, x: n.x, y: n.y, width: n.geometry.width, height: n.geometry.height })),
     input.grouping ?? 'file',
+    input.room?.margins,
   )
   for (const g of groups) {
     minX = Math.min(minX, g.x)
@@ -211,6 +215,7 @@ export function buildDiagramSvg(input: ExportInput): DiagramSvg | null {
     input.direction ?? 'TB',
     input.laidOut,
     input.isPorted,
+    input.room,
   )
   const names = new Map(input.nodes.map((n) => [n.node.id, n.node.name]))
   const nameOf = (id: string) => names.get(id) ?? '?'

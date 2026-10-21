@@ -59,7 +59,9 @@ export function useDiagramExport() {
           display.ports,
           options.grouping,
           overrides,
+          layout?.room,
         ),
+        room: layout?.room,
       })
       if (!svg) return
 

@@ -1,5 +1,6 @@
 import type { DrawnNode } from '@/types/graph'
 import type { LayoutGrouping } from '@/types/view'
+import type { Margins } from './portRoom'
 
 export const EXTERNAL_GROUP = '~external'
 export const GROUP_PADDING = 28
@@ -53,13 +54,23 @@ export interface GroupBox {
   height: number
 }
 
-/** One padded frame per file or package around the nodes currently placed in it. */
-export function computeGroupBoxes(placed: PlacedNode[], grouping: LayoutGrouping): GroupBox[] {
+/** One padded frame per file or package around the nodes currently placed in it and the space kept for their tags. */
+export function computeGroupBoxes(
+  placed: PlacedNode[],
+  grouping: LayoutGrouping,
+  margins?: ReadonlyMap<string, Margins>,
+): GroupBox[] {
   if (!groupingActive(placed.map((p) => p.node), grouping)) return []
   const bounds = new Map<string, GroupBox & { maxX: number; maxY: number }>()
-  for (const { node, x, y, width, height } of placed) {
+  for (const p of placed) {
+    const { node } = p
     const key = groupKeyOf(node, grouping)
     if (!key) continue
+    const m = margins?.get(node.id)
+    const x = p.x - (m?.left ?? 0)
+    const y = p.y - (m?.top ?? 0)
+    const width = p.width + (m ? m.left + m.right : 0)
+    const height = p.height + (m ? m.top + m.bottom : 0)
     const box = bounds.get(key)
     if (!box) {
       bounds.set(key, {

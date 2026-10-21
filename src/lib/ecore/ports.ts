@@ -2,6 +2,7 @@ import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutGrouping, PortMode } from '@/types/view'
 import type { Box } from './edgeGeometry'
 import { groupKeyOf } from './groups'
+import type { PortRoom } from './portRoom'
 
 /** Box centres further apart than this make a long link. */
 const LONG_LINK = 900
@@ -36,17 +37,22 @@ export function portedBeforeLayout(
   return ported
 }
 
-/** Decides, as links are drawn, which ones are ported. */
+/**
+ * Decides, as links are drawn, which ones are ported. When the layout made room for tags, the links it made
+ * room for stay ported however far apart their boxes are moved.
+ */
 export function portPredicate(
   nodes: ReadonlyMap<string, DrawnNode>,
   mode: PortMode,
   grouping: LayoutGrouping,
   overrides: PortOverrides,
+  room?: PortRoom | null,
 ): (edge: DrawnEdge, from: Box, to: Box) => boolean {
   return (edge, from, to) => {
     const chosen = overrides.get(edge.id)
     if (chosen !== undefined) return chosen
     if (edge.from === edge.to) return false
+    if (room) return room.ported.has(edge.id)
     if (mode === 'frames') return crossesFrames(edge, nodes, grouping)
     if (mode === 'long') {
       const dx = from.x + from.width / 2 - (to.x + to.width / 2)

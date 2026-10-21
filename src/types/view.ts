@@ -44,12 +44,14 @@ export interface ViewOptions {
  */
 export type PortMode = 'none' | 'frames' | 'long'
 
-/** Options that change how links are drawn. Only `ports: 'frames'` also changes where boxes go. */
+/** Options that change how links are drawn. `ports: 'frames'` and `portRoom` also change where boxes go. */
 export interface EdgeDisplay {
   routing: EdgeRouting
   otherLinks: OtherLinks
   labels: boolean
   ports: PortMode
+  /** Keeps space clear beside each box for its port tags, so tags never cover boxes or each other. */
+  portRoom: boolean
 }
 
 /** The part of `ViewOptions` the layout engines read. */

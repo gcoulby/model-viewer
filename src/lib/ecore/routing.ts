@@ -1,6 +1,14 @@
 import type { DrawnEdge, ParallelInfo } from '@/types/graph'
 import type { EdgeRouting, LayoutDirection } from '@/types/view'
 import { computeEdgePath, cubicAt, loopPath, polylineMid, type Box, type EdgePath, type Point } from './edgeGeometry'
+import {
+  ROOM_BEND,
+  ROOM_SIDE_MARGIN,
+  ROOM_STUB_LENGTH,
+  roomOffsets,
+  type PortRoom,
+  type PortSide,
+} from './portRoom'
 
 export interface RouteInput {
   edge: DrawnEdge
@@ -13,10 +21,12 @@ export interface LaidOutRoutes {
   boxes: Map<string, Box>
 }
 
-type Side = 'top' | 'bottom' | 'left' | 'right'
+type Side = PortSide
 
 interface Plan {
   ported: boolean
+  /** Ported onto the fixed sides the layout made room on. */
+  roomed: boolean
   edge: DrawnEdge
   parallel: ParallelInfo
   from: Box
@@ -100,14 +110,28 @@ function portSides(a: Box, b: Box, vertical: boolean): [Side, Side] {
   return cb.x >= ca.x ? ['right', 'left'] : ['left', 'right']
 }
 
+const offset = (p: Point, n: Point, by: number): Point => ({ x: p.x + n.x * by, y: p.y + n.y * by })
+
+/**
+ * The stub from a box side out to its tag. A tag spread past the end of its side gets a stub that steps
+ * out, bends across to the tag's place and runs on to it, so the tags stay one step apart.
+ */
+function stub(anchor: Point, spot: Point | undefined, n: Point): Point[] {
+  if (!spot || Math.hypot(spot.x - anchor.x, spot.y - anchor.y) < 0.5) return [anchor, offset(anchor, n, STUB_LENGTH)]
+  const reach = ROOM_STUB_LENGTH + ROOM_BEND
+  return [anchor, offset(anchor, n, 6), offset(spot, n, reach - 6), offset(spot, n, reach)]
+}
+
 /** Two stubs, one out of each box, ending where the port tags go. */
-function portedPath(plan: Plan, start: Point, end: Point): EdgePath {
+function portedPath(plan: Plan, start: Point, end: Point, spots: Map<string, Point>): EdgePath {
   const ns = NORMAL[plan.startSide]
   const ne = NORMAL[plan.endSide]
-  const startTip = { x: start.x + ns.x * STUB_LENGTH, y: start.y + ns.y * STUB_LENGTH }
-  const endTip = { x: end.x + ne.x * STUB_LENGTH, y: end.y + ne.y * STUB_LENGTH }
+  const startStub = stub(start, spots.get(`${plan.edge.id}|start`), ns)
+  const endStub = stub(end, spots.get(`${plan.edge.id}|end`), ne)
+  const startTip = startStub.at(-1) ?? start
+  const endTip = endStub.at(-1) ?? end
   return {
-    d: `M${round(start.x)} ${round(start.y)}L${round(startTip.x)} ${round(startTip.y)}M${round(endTip.x)} ${round(endTip.y)}L${round(end.x)} ${round(end.y)}`,
+    d: roundedPath(startStub, 5) + roundedPath(endStub.toReversed(), 5),
     start,
     end,
     startDirection: ns,
@@ -142,6 +166,26 @@ function distribute(box: Box, side: Side, attaches: Attach[], out: Map<string, P
     if (slot) out.set(slot.key, at(Math.max(-half, Math.min(half, (offsets[i] ?? 0) + shift))))
   })
   for (const p of pinned) out.set(p.key, at(0))
+}
+
+/**
+ * Spreads tags along a side a fixed step apart, as the layout allowed for. Tags that run past the end of
+ * the side keep their place in `spots`, and their stubs leave from the end of the side.
+ */
+function distributeRoom(box: Box, side: Side, attaches: Attach[], out: Map<string, Point>, spots: Map<string, Point>) {
+  const horizontal = isVerticalSide(side)
+  const length = horizontal ? box.width : box.height
+  const centre = horizontal ? box.x + box.width / 2 : box.y + box.height / 2
+  const fixed = side === 'top' ? box.y : side === 'bottom' ? box.y + box.height : side === 'left' ? box.x : box.x + box.width
+  const at = (offset: number): Point => (horizontal ? { x: centre + offset, y: fixed } : { x: fixed, y: centre + offset })
+  const half = Math.max(0, length / 2 - ROOM_SIDE_MARGIN)
+  const sorted = [...attaches].sort((a, b) => a.along - b.along || a.order - b.order)
+  const offsets = roomOffsets(sorted.length)
+  sorted.forEach((a, i) => {
+    const o = offsets[i] ?? 0
+    out.set(a.key, at(Math.max(-half, Math.min(half, o))))
+    spots.set(a.key, at(o))
+  })
 }
 
 /** A polyline with its corners rounded off. */
@@ -308,6 +352,7 @@ export function routeEdges(
   direction: LayoutDirection,
   laidOut?: LaidOutRoutes,
   isPorted?: (edge: DrawnEdge, from: Box, to: Box) => boolean,
+  room?: Pick<PortRoom, 'outSide' | 'inSide'> | null,
 ): Map<string, EdgePath> {
   const paths = new Map<string, EdgePath>()
   const plans: Plan[] = []
@@ -322,8 +367,8 @@ export function routeEdges(
       continue
     }
     if (isPorted?.(edge, from, to)) {
-      const [startSide, endSide] = portSides(from, to, vertical)
-      plans.push({ ported: true, edge, parallel, from, to, startSide, endSide })
+      const [startSide, endSide] = room ? [room.outSide, room.inSide] : portSides(from, to, vertical)
+      plans.push({ ported: true, roomed: !!room, edge, parallel, from, to, startSide, endSide })
       continue
     }
     if (routing === 'straight') {
@@ -342,27 +387,28 @@ export function routeEdges(
       paths.set(edge.id, computeEdgePath(from, to, parallel, false))
       continue
     }
-    plans.push({ ported: false, edge, parallel, from, to, startSide: sides[0], endSide: sides[1] })
+    plans.push({ ported: false, roomed: false, edge, parallel, from, to, startSide: sides[0], endSide: sides[1] })
   }
 
-  const groups = new Map<string, { box: Box; side: Side; attaches: Attach[] }>()
-  const attach = (nodeId: string, box: Box, side: Side, a: Attach) => {
-    const key = `${nodeId}|${side}`
+  // Roomed tags are spread on their own, apart from any lines that happen to meet the same side.
+  const groups = new Map<string, { box: Box; side: Side; roomed: boolean; attaches: Attach[] }>()
+  const attach = (nodeId: string, box: Box, side: Side, roomed: boolean, a: Attach) => {
+    const key = `${nodeId}|${side}${roomed ? '|room' : ''}`
     const group = groups.get(key)
     if (group) group.attaches.push(a)
-    else groups.set(key, { box, side, attaches: [a] })
+    else groups.set(key, { box, side, roomed, attaches: [a] })
   }
   plans.forEach((plan, order) => {
-    const { edge, from, to, startSide, endSide } = plan
+    const { edge, from, to, startSide, endSide, roomed } = plan
     const toCentre = centreOf(to)
     const fromCentre = centreOf(from)
-    attach(edge.from, from, startSide, {
+    attach(edge.from, from, startSide, roomed, {
       key: `${edge.id}|start`,
       along: isVerticalSide(startSide) ? toCentre.x : toCentre.y,
       pinned: false,
       order,
     })
-    attach(edge.to, to, endSide, {
+    attach(edge.to, to, endSide, roomed, {
       key: `${edge.id}|end`,
       along: isVerticalSide(endSide) ? fromCentre.x : fromCentre.y,
       pinned: edge.kind === 'inherit' && !plan.ported,
@@ -370,14 +416,18 @@ export function routeEdges(
     })
   })
   const ports = new Map<string, Point>()
-  for (const { box, side, attaches } of groups.values()) distribute(box, side, attaches, ports)
+  const spots = new Map<string, Point>()
+  for (const { box, side, roomed, attaches } of groups.values()) {
+    if (roomed) distributeRoom(box, side, attaches, ports, spots)
+    else distribute(box, side, attaches, ports)
+  }
 
   for (const plan of plans) {
     const start = ports.get(`${plan.edge.id}|start`)
     const end = ports.get(`${plan.edge.id}|end`)
     if (!start || !end) continue
     const path = plan.ported
-      ? portedPath(plan, start, end)
+      ? portedPath(plan, start, end, spots)
       : routing === 'curved'
         ? curvedPath(plan, start, end)
         : orthogonalPath(plan, start, end)

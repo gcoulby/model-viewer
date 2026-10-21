@@ -6,12 +6,15 @@ import type { ModelGraph } from '@/types/graph'
 import type { VisibleGraph } from '@/lib/ecore/visibleGraph'
 import type { DrawnGraph } from '@/lib/ecore/fold'
 import type { NodeGeometry } from '@/types/view'
+import type { PortRoom } from '@/lib/ecore/portRoom'
 import type { Position } from '@/lib/ecore/layout'
 
 export interface DiagramLayout {
   positions: Map<string, Position>
   geometry: Map<string, NodeGeometry>
   laidOut: LaidOutRoutes
+  /** The space the layout kept for port tags, when it was asked to. */
+  room: PortRoom | null
 }
 
 export interface DiagramContextValue {
