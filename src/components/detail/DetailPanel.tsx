@@ -1,7 +1,7 @@
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useResizableWidth } from '@/hooks/useResizableWidth'
+import { useResizableSize } from '@/hooks/useResizableSize'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useSelection } from '@/hooks/useSelection'
 import { DetailContent } from './DetailContent'
@@ -11,7 +11,7 @@ export function DetailPanel() {
   const { graph } = useDiagram()
   const { selectedId, clear } = useSelection()
   const isMobile = useIsMobile()
-  const { width, startResize } = useResizableWidth('ecore-viewer:detail-width', 344, 280, 760, 'left')
+  const { size: width, startResize } = useResizableSize('ecore-viewer:detail-width', 344, 280, 760, 'left')
   const node = graph && selectedId ? graph.nodes.get(selectedId) : undefined
 
   if (isMobile) {
