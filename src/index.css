@@ -43,6 +43,7 @@
   --color-node: var(--node);
   --color-edge: var(--edge);
   --color-halo: var(--halo);
+  --color-cycle: var(--cycle);
   --color-tint: var(--tint);
   --color-selection: var(--selection);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -83,6 +84,7 @@
   --node: #ffffff;
   --edge: #45515f;
   --halo: #eceff3;
+  --cycle: #c4392f;
   --tint: rgba(39, 69, 209, 0.1);
   --selection: #2745d1;
 }
@@ -118,6 +120,7 @@
   --node: #1b232d;
   --edge: #9aa7b8;
   --halo: #11161c;
+  --cycle: #ec7267;
   --tint: rgba(127, 155, 255, 0.14);
   --selection: #8fa8ff;
 }

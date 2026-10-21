@@ -20,6 +20,10 @@ export interface EdgePath {
   startDirection: Point
   /** Unit direction of the path arriving at the end point. */
   endDirection: Point
+  /** Halfway along the path, for a label that belongs to the whole link. */
+  mid: Point
+  /** Set when the link is drawn as two short stubs ending in tags instead of one line. */
+  ports?: { start: PortTag; end: PortTag }
   /** Where the label at each end goes, so labels of neighbouring links on one box side do not collide. */
   startLabel?: LabelHint
   endLabel?: LabelHint
@@ -33,7 +37,13 @@ export interface LabelHint {
 }
 
 export interface LabelPlacement extends Point {
-  anchor: 'start' | 'end'
+  anchor: 'start' | 'end' | 'middle'
+}
+
+/** Where a ported link's tag sits: the tip of its stub, and the way the stub leaves the box. */
+export interface PortTag {
+  at: Point
+  direction: Point
 }
 
 const PARALLEL_SPACING = 64
@@ -42,6 +52,36 @@ const LOOP_STEP = 28
 const LABEL_SIDE_OFFSET = 11
 
 const round = (n: number) => Math.round(n * 10) / 10
+
+export function quadAt(a: Point, c: Point, b: Point, t: number): Point {
+  const u = 1 - t
+  return { x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y }
+}
+
+export function cubicAt(a: Point, c1: Point, c2: Point, b: Point, t: number): Point {
+  const u = 1 - t
+  const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t] as const
+  return {
+    x: w[0] * a.x + w[1] * c1.x + w[2] * c2.x + w[3] * b.x,
+    y: w[0] * a.y + w[1] * c1.y + w[2] * c2.y + w[3] * b.y,
+  }
+}
+
+/** The point halfway along a polyline, by length. */
+export function polylineMid(points: Point[]): Point {
+  const first = points[0] ?? { x: 0, y: 0 }
+  let total = 0
+  for (let i = 1; i < points.length; i++) total += Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y)
+  let left = total / 2
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!
+    const b = points[i]!
+    const length = Math.hypot(b.x - a.x, b.y - a.y)
+    if (length >= left && length > 0) return { x: a.x + ((b.x - a.x) * left) / length, y: a.y + ((b.y - a.y) * left) / length }
+    left -= length
+  }
+  return points.at(-1) ?? first
+}
 
 function normalise(v: Point): Point {
   const length = Math.hypot(v.x, v.y) || 1
@@ -79,6 +119,7 @@ export function loopPath(box: Box, index: number): EdgePath {
     end: { x: right, y: endY },
     startDirection: { x: 0, y: -1 },
     endDirection: { x: -1, y: 0 },
+    mid: cubicAt({ x: startX, y: box.y }, { x: startX, y: box.y - extent }, { x: right + extent, y: endY }, { x: right, y: endY }, 0.5),
   }
 }
 
@@ -108,7 +149,8 @@ export function computeEdgePath(from: Box, to: Box, parallel: ParallelInfo, isLo
   const d = curved
     ? `M${round(start.x)} ${round(start.y)}Q${round(control.x)} ${round(control.y)} ${round(end.x)} ${round(end.y)}`
     : `M${round(start.x)} ${round(start.y)}L${round(end.x)} ${round(end.y)}`
-  return { d, start, end, startDirection, endDirection }
+  const mid = curved ? quadAt(start, control, end, 0.5) : { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }
+  return { d, start, end, startDirection, endDirection, mid }
 }
 
 /** Label position beside `point`, pushed `offset` along `direction` and off to the side of the line. */

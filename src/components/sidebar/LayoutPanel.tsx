@@ -11,9 +11,11 @@ import {
 } from '@/data/layoutOptions'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useViewOptions } from '@/hooks/useViewOptions'
+import { DetailLevelControl } from './DetailLevelControl'
 import { DirectionIcon } from './DirectionIcon'
 import { LabelledCheckbox } from './LabelledCheckbox'
 import { OptionSelect } from './OptionSelect'
+import { PortsControl } from './PortsControl'
 import { SegmentedControl } from './SegmentedControl'
 import { SettingRow } from './SettingRow'
 
@@ -34,6 +36,9 @@ export function LayoutPanel() {
         )}
       </CollapsibleTrigger>
       <CollapsibleContent>
+        <SettingRow label="Detail">
+          <DetailLevelControl />
+        </SettingRow>
         <SettingRow label="Algorithm">
           <OptionSelect
             label="Layout algorithm"
@@ -96,6 +101,9 @@ export function LayoutPanel() {
             choices={EDGE_ROUTINGS}
             onChange={(v) => setDisplay('routing', v)}
           />
+        </SettingRow>
+        <SettingRow label="Ports">
+          <PortsControl />
         </SettingRow>
         {someLinksFree && (
           <SettingRow label="Links that do not shape the layout">

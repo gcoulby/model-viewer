@@ -1,9 +1,9 @@
-import type { GraphEdge, ParallelInfo } from '@/types/graph'
+import type { DrawnEdge, ParallelInfo } from '@/types/graph'
 import type { EdgeRouting, LayoutDirection } from '@/types/view'
-import { computeEdgePath, loopPath, type Box, type EdgePath, type Point } from './edgeGeometry'
+import { computeEdgePath, cubicAt, loopPath, polylineMid, type Box, type EdgePath, type Point } from './edgeGeometry'
 
 export interface RouteInput {
-  edge: GraphEdge
+  edge: DrawnEdge
   parallel: ParallelInfo
 }
 
@@ -16,7 +16,8 @@ export interface LaidOutRoutes {
 type Side = 'top' | 'bottom' | 'left' | 'right'
 
 interface Plan {
-  edge: GraphEdge
+  ported: boolean
+  edge: DrawnEdge
   parallel: ParallelInfo
   from: Box
   to: Box
@@ -34,7 +35,9 @@ interface Attach {
 const MIN_GAP = 14
 const BUS_OFFSET = 24
 const PARALLEL_STEP = 10
-const PORT_STEP = 16
+const PORT_STEP = 18
+/** How far a ported link's stub sticks out of its box before the tag. */
+const STUB_LENGTH = 14
 const PORT_MARGIN = 10
 const CORNER_RADIUS = 8
 const MOVED_TOLERANCE = 0.5
@@ -85,6 +88,33 @@ function chooseSides(a: Box, b: Box, vertical: boolean): [Side, Side] | null {
   if (useVertical) return below > above ? ['bottom', 'top'] : ['top', 'bottom']
   if (useHorizontal) return right > left ? ['right', 'left'] : ['left', 'right']
   return null
+}
+
+/** Sides for a ported link: the facing sides, or failing that the sides towards each other on the main axis. */
+function portSides(a: Box, b: Box, vertical: boolean): [Side, Side] {
+  const facing = chooseSides(a, b, vertical)
+  if (facing) return facing
+  const ca = centreOf(a)
+  const cb = centreOf(b)
+  if (vertical) return cb.y >= ca.y ? ['bottom', 'top'] : ['top', 'bottom']
+  return cb.x >= ca.x ? ['right', 'left'] : ['left', 'right']
+}
+
+/** Two stubs, one out of each box, ending where the port tags go. */
+function portedPath(plan: Plan, start: Point, end: Point): EdgePath {
+  const ns = NORMAL[plan.startSide]
+  const ne = NORMAL[plan.endSide]
+  const startTip = { x: start.x + ns.x * STUB_LENGTH, y: start.y + ns.y * STUB_LENGTH }
+  const endTip = { x: end.x + ne.x * STUB_LENGTH, y: end.y + ne.y * STUB_LENGTH }
+  return {
+    d: `M${round(start.x)} ${round(start.y)}L${round(startTip.x)} ${round(startTip.y)}M${round(endTip.x)} ${round(endTip.y)}L${round(end.x)} ${round(end.y)}`,
+    start,
+    end,
+    startDirection: ns,
+    endDirection: { x: -ne.x, y: -ne.y },
+    mid: startTip,
+    ports: { start: { at: startTip, direction: ns }, end: { at: endTip, direction: ne } },
+  }
 }
 
 /** Spreads the edges meeting one side of a box along it, ordered by where their other ends lie. */
@@ -169,6 +199,7 @@ function polylineEdgePath(points: Point[]): EdgePath {
     end,
     startDirection: unit(start, second),
     endDirection: unit(beforeLast, end),
+    mid: polylineMid(points),
   }
 }
 
@@ -194,6 +225,7 @@ function orthogonalPath(plan: Plan, start: Point, end: Point): EdgePath {
     end,
     startDirection: NORMAL[plan.startSide],
     endDirection: { x: -normal.x, y: -normal.y },
+    mid: polylineMid(points),
   }
 }
 
@@ -210,6 +242,7 @@ function curvedPath(plan: Plan, start: Point, end: Point): EdgePath {
     end,
     startDirection: ns,
     endDirection: { x: -ne.x, y: -ne.y },
+    mid: cubicAt(start, c1, c2, end, 0.5),
   }
 }
 
@@ -274,6 +307,7 @@ export function routeEdges(
   routing: EdgeRouting,
   direction: LayoutDirection,
   laidOut?: LaidOutRoutes,
+  isPorted?: (edge: DrawnEdge, from: Box, to: Box) => boolean,
 ): Map<string, EdgePath> {
   const paths = new Map<string, EdgePath>()
   const plans: Plan[] = []
@@ -285,6 +319,11 @@ export function routeEdges(
     if (!from || !to) continue
     if (edge.from === edge.to) {
       paths.set(edge.id, loopPath(from, parallel.index))
+      continue
+    }
+    if (isPorted?.(edge, from, to)) {
+      const [startSide, endSide] = portSides(from, to, vertical)
+      plans.push({ ported: true, edge, parallel, from, to, startSide, endSide })
       continue
     }
     if (routing === 'straight') {
@@ -303,7 +342,7 @@ export function routeEdges(
       paths.set(edge.id, computeEdgePath(from, to, parallel, false))
       continue
     }
-    plans.push({ edge, parallel, from, to, startSide: sides[0], endSide: sides[1] })
+    plans.push({ ported: false, edge, parallel, from, to, startSide: sides[0], endSide: sides[1] })
   }
 
   const groups = new Map<string, { box: Box; side: Side; attaches: Attach[] }>()
@@ -326,7 +365,7 @@ export function routeEdges(
     attach(edge.to, to, endSide, {
       key: `${edge.id}|end`,
       along: isVerticalSide(endSide) ? fromCentre.x : fromCentre.y,
-      pinned: edge.kind === 'inherit',
+      pinned: edge.kind === 'inherit' && !plan.ported,
       order,
     })
   })
@@ -337,8 +376,13 @@ export function routeEdges(
     const start = ports.get(`${plan.edge.id}|start`)
     const end = ports.get(`${plan.edge.id}|end`)
     if (!start || !end) continue
-    paths.set(plan.edge.id, routing === 'curved' ? curvedPath(plan, start, end) : orthogonalPath(plan, start, end))
+    const path = plan.ported
+      ? portedPath(plan, start, end)
+      : routing === 'curved'
+        ? curvedPath(plan, start, end)
+        : orthogonalPath(plan, start, end)
+    paths.set(plan.edge.id, path)
   }
-  if (routing !== 'straight') hintLabels(paths, edges, boxes)
+  hintLabels(paths, edges, boxes)
   return paths
 }

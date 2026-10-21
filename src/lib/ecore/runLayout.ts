@@ -1,5 +1,5 @@
 import type { ELK } from 'elkjs/lib/elk-api'
-import type { GraphEdge, GraphNode } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutSettings, NodeGeometry } from '@/types/view'
 import { layoutWithElk } from './elkLayout'
 import type { LayoutResult } from './layout'
@@ -12,8 +12,8 @@ export interface LayoutOutcome {
 }
 
 export async function runLayout(
-  nodes: GraphNode[],
-  edges: GraphEdge[],
+  nodes: DrawnNode[],
+  edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
   loadElk: () => Promise<ELK>,

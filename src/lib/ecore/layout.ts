@@ -1,6 +1,6 @@
 import dagre from '@dagrejs/dagre'
 import { spacingFactor } from '@/data/layoutOptions'
-import type { GraphEdge, GraphNode } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutSettings, NodeGeometry } from '@/types/view'
 import type { Point } from './edgeGeometry'
 
@@ -22,18 +22,18 @@ const GRID_MIN_WIDTH = 900
 const GRID_FALLBACK_WIDTH = 1400
 const GRID_CLEARANCE = 90
 
-const KIND_ORDER: Record<GraphNode['kind'], number> = { class: 0, enum: 1, datatype: 2, external: 3 }
+const KIND_ORDER: Record<DrawnNode['kind'], number> = { package: 0, class: 0, enum: 1, datatype: 2, external: 3 }
 
-function packageName(node: GraphNode): string {
+function packageName(node: DrawnNode): string {
   return node.kind === 'external' ? '~' : node.package.fullName
 }
 
-export function compareNodes(a: GraphNode, b: GraphNode): number {
+export function compareNodes(a: DrawnNode, b: DrawnNode): number {
   return KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.name.localeCompare(b.name)
 }
 
 /** Package by package, externals last, then as `compareNodes`. */
-export function comparePackages(a: GraphNode, b: GraphNode): number {
+export function comparePackages(a: DrawnNode, b: DrawnNode): number {
   return (
     packageName(a).localeCompare(packageName(b)) ||
     (a.kind === 'external' ? 1 : 0) - (b.kind === 'external' ? 1 : 0) ||
@@ -42,7 +42,7 @@ export function comparePackages(a: GraphNode, b: GraphNode): number {
 }
 
 function placeGrid(
-  nodes: GraphNode[],
+  nodes: DrawnNode[],
   geometry: Map<string, NodeGeometry>,
   positions: Map<string, Position>,
   originX: number,
@@ -72,8 +72,8 @@ function placeGrid(
  * below. `edges` are the ones that shape the layout (see `layoutEdges`); no other edge is read.
  */
 export function layoutDagre(
-  nodes: GraphNode[],
-  edges: GraphEdge[],
+  nodes: DrawnNode[],
+  edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
   settings: Pick<LayoutSettings, 'direction' | 'spacing' | 'algorithm'>,
 ): LayoutResult {

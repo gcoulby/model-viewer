@@ -1,18 +1,19 @@
 import type { Node } from '@xyflow/react'
-import type { GraphNode } from '@/types/graph'
+import type { DrawnNode } from '@/types/graph'
 import type { NodeGeometry } from '@/types/view'
 import { ClassNode } from './ClassNode'
 import { DataTypeNode } from './DataTypeNode'
 import { EnumNode } from './EnumNode'
 import { ExternalNode } from './ExternalNode'
 import { FileGroupNodeView, type FileGroupNode } from './FileGroupNode'
+import { PackageNode } from './PackageNode'
 
 export interface DiagramNodeData extends Record<string, unknown> {
-  node: GraphNode
+  node: DrawnNode
   geometry: NodeGeometry
 }
 
-export type DiagramNodeType = 'classNode' | 'enumNode' | 'dataTypeNode' | 'externalNode'
+export type DiagramNodeType = 'classNode' | 'enumNode' | 'dataTypeNode' | 'externalNode' | 'packageNode'
 
 export type DiagramNode = Node<DiagramNodeData, DiagramNodeType>
 
@@ -25,9 +26,10 @@ export const nodeTypes = {
   enumNode: EnumNode,
   dataTypeNode: DataTypeNode,
   externalNode: ExternalNode,
+  packageNode: PackageNode,
 }
 
-export function nodeTypeFor(kind: GraphNode['kind']): DiagramNodeType {
+export function nodeTypeFor(kind: DrawnNode['kind']): DiagramNodeType {
   switch (kind) {
     case 'class':
       return 'classNode'
@@ -37,5 +39,7 @@ export function nodeTypeFor(kind: GraphNode['kind']): DiagramNodeType {
       return 'dataTypeNode'
     case 'external':
       return 'externalNode'
+    case 'package':
+      return 'packageNode'
   }
 }

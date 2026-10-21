@@ -1,4 +1,4 @@
-import type { GraphNode } from '@/types/graph'
+import type { DrawnNode } from '@/types/graph'
 import type { LayoutGrouping } from '@/types/view'
 
 export const EXTERNAL_GROUP = '~external'
@@ -6,24 +6,24 @@ export const GROUP_PADDING = 28
 export const GROUP_LABEL_HEIGHT = 30
 
 /** The frame a node belongs to, or null when nodes are not grouped. */
-export function groupKeyOf(node: GraphNode, grouping: LayoutGrouping): string | null {
+export function groupKeyOf(node: DrawnNode, grouping: LayoutGrouping): string | null {
   if (grouping === 'none') return null
   if (node.kind === 'external') return EXTERNAL_GROUP
   return grouping === 'file' ? node.package.fileKey : node.package.id
 }
 
-export function groupLabelOf(node: GraphNode, grouping: LayoutGrouping): string {
+export function groupLabelOf(node: DrawnNode, grouping: LayoutGrouping): string {
   if (node.kind === 'external') return 'External'
   return grouping === 'package' ? node.package.fullName : node.package.fileName
 }
 
 /** The file whose colour tints the frame, or null for the externals frame. */
-export function groupHueKeyOf(node: GraphNode): string | null {
+export function groupHueKeyOf(node: DrawnNode): string | null {
   return node.kind === 'external' ? null : node.package.fileKey
 }
 
 /** Frames are only drawn once there is more than one file or package on the diagram to tell apart. */
-export function groupingActive(nodes: GraphNode[], grouping: LayoutGrouping): boolean {
+export function groupingActive(nodes: DrawnNode[], grouping: LayoutGrouping): boolean {
   if (grouping === 'none') return false
   const keys = new Set<string>()
   for (const node of nodes) {
@@ -35,7 +35,7 @@ export function groupingActive(nodes: GraphNode[], grouping: LayoutGrouping): bo
 }
 
 export interface PlacedNode {
-  node: GraphNode
+  node: DrawnNode
   x: number
   y: number
   width: number

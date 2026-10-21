@@ -33,6 +33,20 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const toggleFolded = useCallback((ids: string[]) => {
+    setScope((prev) => {
+      const folded = new Set(prev.folded)
+      const allFolded = ids.every((id) => folded.has(id))
+      for (const id of ids) {
+        if (allFolded) folded.delete(id)
+        else folded.add(id)
+      }
+      return { ...prev, folded }
+    })
+  }, [])
+
+  const setFolded = useCallback((ids: string[]) => setScope((prev) => ({ ...prev, folded: new Set(ids) })), [])
+
   const showHidden = useCallback(() => setScope((prev) => ({ ...prev, hidden: new Set() })), [])
 
   const reveal = useCallback((scopeId: string) => {
@@ -41,13 +55,13 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
       if (!prev.hidden.has(scopeId) && !focusMisses) return prev
       const hidden = new Set(prev.hidden)
       hidden.delete(scopeId)
-      return { focus: focusMisses ? null : prev.focus, hidden }
+      return { ...prev, focus: focusMisses ? null : prev.focus, hidden }
     })
   }, [])
 
   const value = useMemo(
-    () => ({ ...scope, focusOn, clearFocus, setIncludeLinked, toggleHidden, showHidden, reveal }),
-    [scope, focusOn, clearFocus, setIncludeLinked, toggleHidden, showHidden, reveal],
+    () => ({ ...scope, focusOn, clearFocus, setIncludeLinked, toggleHidden, toggleFolded, setFolded, showHidden, reveal }),
+    [scope, focusOn, clearFocus, setIncludeLinked, toggleHidden, toggleFolded, setFolded, showHidden, reveal],
   )
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>
 }

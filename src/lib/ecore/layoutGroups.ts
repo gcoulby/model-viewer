@@ -1,5 +1,5 @@
 import { spacingFactor } from '@/data/layoutOptions'
-import type { GraphEdge, GraphNode } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutSettings, NodeGeometry } from '@/types/view'
 import type { Point } from './edgeGeometry'
 import { EXTERNAL_GROUP, GROUP_LABEL_HEIGHT, GROUP_PADDING, groupKeyOf, groupingActive } from './groups'
@@ -10,7 +10,7 @@ const BLOCK_GAP = 70
 const ROW_ASPECT = 1.6
 
 interface Block {
-  members: GraphNode[]
+  members: DrawnNode[]
   result: LayoutResult
   minX: number
   minY: number
@@ -19,8 +19,8 @@ interface Block {
 }
 
 function layoutBlock(
-  members: GraphNode[],
-  edges: GraphEdge[],
+  members: DrawnNode[],
+  edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
 ): Block {
@@ -56,15 +56,15 @@ function layoutBlock(
  * are packed in rows, so groups stay visually apart; edges between groups are only drawn over the result.
  */
 export function layoutWithDagre(
-  nodes: GraphNode[],
-  edges: GraphEdge[],
+  nodes: DrawnNode[],
+  edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
 ): LayoutResult {
   const shaping = layoutEdges(nodes, edges, settings)
   if (!groupingActive(nodes, settings.grouping)) return layoutDagre(nodes, shaping, geometry, settings)
 
-  const groups = new Map<string, GraphNode[]>()
+  const groups = new Map<string, DrawnNode[]>()
   for (const node of nodes) {
     const key = groupKeyOf(node, settings.grouping) ?? ''
     const list = groups.get(key)

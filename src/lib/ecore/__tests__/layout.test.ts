@@ -3,7 +3,7 @@ import Elk from 'elkjs/lib/elk.bundled.js'
 import { describe, expect, it } from 'vitest'
 import { defaultViewOptions } from '@/data/viewOptions'
 import { SAMPLES } from '@/data/samples'
-import type { ClassGraphNode, GraphEdge, GraphNode } from '@/types/graph'
+import type { ClassGraphNode, DrawnEdge, GraphEdge, GraphNode } from '@/types/graph'
 import type { LayoutAlgorithm, NodeGeometry, ViewOptions } from '@/types/view'
 import { buildGraph } from '../buildGraph'
 import type { Box } from '../edgeGeometry'
@@ -177,7 +177,7 @@ describe('shaping edges', () => {
   it('pulls in boxes the chosen links miss', () => {
     const { visible } = geometryFor(options())
     const loan = find('Loan')
-    const touches = (edges: GraphEdge[]) => edges.some((e) => e.from === loan.id || e.to === loan.id)
+    const touches = (edges: DrawnEdge[]) => edges.some((e) => e.from === loan.id || e.to === loan.id)
     const opts = (pullIn: boolean) => options({ layoutMode: 'inheritance', pullIn })
     expect(touches(layoutEdges(visible.nodes, visible.edges, opts(false)))).toBe(false)
     expect(touches(layoutEdges(visible.nodes, visible.edges, opts(true)))).toBe(true)

@@ -19,7 +19,7 @@ interface ZoomPanelProps {
 export function ZoomPanel({ tool, onToolChange }: ZoomPanelProps) {
   const { zoomTo, getZoom, fitView } = useReactFlow<CanvasNode, DiagramEdge>()
   const zoom = useStore((s) => s.transform[2])
-  const { relayout, graph } = useDiagram()
+  const { relayout, graph, layoutStale } = useDiagram()
   const isMobile = useIsMobile()
 
   return (
@@ -59,8 +59,14 @@ export function ZoomPanel({ tool, onToolChange }: ZoomPanelProps) {
       <Button variant="ghost" onClick={() => void fitView(FIT_OPTIONS)}>
         Fit
       </Button>
-      <Button variant="ghost" disabled={!graph} onClick={relayout}>
+      <Button
+        variant={layoutStale ? 'secondary' : 'ghost'}
+        disabled={!graph}
+        onClick={relayout}
+        title={layoutStale ? 'Links were ported or unported; lay out again to separate the parts they join' : undefined}
+      >
         Re-layout
+        {layoutStale && <span aria-label="out of date" className="size-1.5 rounded-full bg-primary" />}
       </Button>
     </Panel>
   )

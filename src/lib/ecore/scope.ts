@@ -5,9 +5,11 @@ export interface Scope {
   /** When set, only these packages (plus what they link to) are shown. */
   focus: { ids: ReadonlySet<string>; label: string; includeLinked: boolean } | null
   hidden: ReadonlySet<string>
+  /** Packages drawn as one box each, standing in for their types. */
+  folded: ReadonlySet<string>
 }
 
-export const NO_SCOPE: Scope = { focus: null, hidden: new Set() }
+export const NO_SCOPE: Scope = { focus: null, hidden: new Set(), folded: new Set() }
 
 export function scopeIdOf(model: ParsedModel, pkg: ParsedPackage): string {
   return `${model.key}|${pkg.path}`

@@ -1,4 +1,4 @@
-import type { GraphNode } from '@/types/graph'
+import type { DrawnNode } from '@/types/graph'
 import type { NodePaint } from '@/types/view'
 
 /** Hue for a file key; the colour a file gets until the user picks one. */
@@ -26,7 +26,7 @@ export function externalPaint(dark: boolean): NodePaint {
   return dark ? { header: '#26303c', stroke: '#6b7a8c' } : { header: '#e3e8ee', stroke: '#8b97a6' }
 }
 
-export function paintForNode(node: GraphNode, dark: boolean, hueFor: HueFor): NodePaint {
+export function paintForNode(node: DrawnNode, dark: boolean, hueFor: HueFor): NodePaint {
   return node.kind === 'external' ? externalPaint(dark) : paintForHue(hueFor(node.package.fileKey), dark)
 }
 

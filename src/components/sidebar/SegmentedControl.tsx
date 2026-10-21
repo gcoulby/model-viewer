@@ -4,7 +4,8 @@ import type { Choice } from '@/data/layoutOptions'
 
 interface SegmentedControlProps<T extends string> {
   label: string
-  value: T
+  /** Null when none of the choices describes the current state. */
+  value: T | null
   choices: Choice<T>[]
   onChange: (value: T) => void
   /** Draws an item's content in place of its label, which then becomes its tooltip. */
@@ -23,7 +24,7 @@ export function SegmentedControl<T extends string>({
       variant="outline"
       size="sm"
       spacing={0}
-      value={[value]}
+      value={value === null ? [] : [value]}
       aria-label={label}
       className="w-full"
       onValueChange={(next) => {

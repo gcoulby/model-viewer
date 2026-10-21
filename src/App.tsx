@@ -3,6 +3,7 @@ import { AppShell } from '@/components/shell/AppShell'
 import { DiagramProvider } from '@/components/providers/DiagramProvider'
 import { FileColorsProvider } from '@/components/providers/FileColorsProvider'
 import { ModelsProvider } from '@/components/providers/ModelsProvider'
+import { PortsProvider } from '@/components/providers/PortsProvider'
 import { PasteDialogProvider } from '@/components/providers/PasteDialogProvider'
 import { ScopeProvider } from '@/components/providers/ScopeProvider'
 import { SelectionProvider } from '@/components/providers/SelectionProvider'
@@ -20,6 +21,7 @@ export default function App() {
           <ViewOptionsProvider>
             <SelectionProvider>
               <ScopeProvider>
+              <PortsProvider>
               <DiagramProvider>
                 <PasteDialogProvider>
                   <ReactFlowProvider>
@@ -27,6 +29,7 @@ export default function App() {
                   </ReactFlowProvider>
                 </PasteDialogProvider>
               </DiagramProvider>
+              </PortsProvider>
               </ScopeProvider>
             </SelectionProvider>
           </ViewOptionsProvider>

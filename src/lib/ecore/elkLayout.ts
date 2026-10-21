@@ -1,6 +1,6 @@
 import type { ELK, ElkExtendedEdge, ElkNode, LayoutOptions } from 'elkjs/lib/elk-api'
 import { spacingFactor } from '@/data/layoutOptions'
-import type { GraphEdge, GraphNode } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutDirection, LayoutSettings, NodeGeometry } from '@/types/view'
 import type { Point } from './edgeGeometry'
 import { EXTERNAL_GROUP, GROUP_LABEL_HEIGHT, GROUP_PADDING, groupKeyOf, groupingActive } from './groups'
@@ -93,8 +93,8 @@ const elkAlgorithmOf = (settings: LayoutSettings): ElkAlgorithm =>
   settings.algorithm === 'dagre' ? 'layered' : settings.algorithm
 
 interface Members {
-  nodes: GraphNode[]
-  edges: GraphEdge[]
+  nodes: DrawnNode[]
+  edges: DrawnEdge[]
 }
 
 /** ELK node and edge builders sharing one set of supertype ports. */
@@ -104,7 +104,7 @@ function elkBuilders(members: Members, geometry: Map<string, NodeGeometry>, sett
   const ports = new Set<string>()
   if (routesEdges(algorithm)) for (const e of members.edges) if (e.kind === 'inherit') ports.add(e.to + SUBTYPES_PORT)
 
-  const node = (n: GraphNode): ElkNode => {
+  const node = (n: DrawnNode): ElkNode => {
     const geo = geometry.get(n.id)
     const port = n.id + SUBTYPES_PORT
     const elkNode: ElkNode = { id: n.id, width: geo?.width ?? 0, height: geo?.height ?? 0 }
@@ -117,7 +117,7 @@ function elkBuilders(members: Members, geometry: Map<string, NodeGeometry>, sett
     return elkNode
   }
   // Supertypes come first, so subtypes rank below them.
-  const edge = (e: GraphEdge): ElkExtendedEdge => {
+  const edge = (e: DrawnEdge): ElkExtendedEdge => {
     if (e.kind !== 'inherit') return { id: e.id, sources: [e.from], targets: [e.to] }
     const port = e.to + SUBTYPES_PORT
     return { id: e.id, sources: [ports.has(port) ? port : e.to], targets: [e.from] }
@@ -137,7 +137,7 @@ function sectionPoints(edge: ElkExtendedEdge): Point[] | null {
 }
 
 /** Reads node positions and, unless told not to, edge routes back out of a laid-out ELK graph. */
-function readResult(laidOut: ElkNode, edges: GraphEdge[], withRoutes: boolean): LayoutResult {
+function readResult(laidOut: ElkNode, edges: DrawnEdge[], withRoutes: boolean): LayoutResult {
   const positions = new Map<string, Point>()
   const routes = new Map<string, Point[]>()
   const byId = new Map(edges.map((e) => [e.id, e]))
@@ -163,7 +163,7 @@ function readResult(laidOut: ElkNode, edges: GraphEdge[], withRoutes: boolean): 
 /** Pushes overlapping boxes apart while keeping the layout's overall shape. */
 async function removeOverlaps(
   elk: ELK,
-  nodes: GraphNode[],
+  nodes: DrawnNode[],
   geometry: Map<string, NodeGeometry>,
   positions: Map<string, Point>,
   settings: LayoutSettings,
@@ -208,7 +208,7 @@ async function layoutFlat(
 async function layoutLayeredFrames(
   elk: ELK,
   members: Members,
-  frames: Map<string, GraphNode[]>,
+  frames: Map<string, DrawnNode[]>,
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
 ): Promise<LayoutResult> {
@@ -238,7 +238,7 @@ function framePadding(): string {
 async function layoutFramesApart(
   elk: ELK,
   members: Members,
-  frames: Map<string, GraphNode[]>,
+  frames: Map<string, DrawnNode[]>,
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
 ): Promise<LayoutResult> {
@@ -307,8 +307,8 @@ async function layoutFramesApart(
 /** Lays out with ELK. Rejects if ELK fails or leaves any box unplaced. */
 export async function layoutWithElk(
   elk: ELK,
-  nodes: GraphNode[],
-  edges: GraphEdge[],
+  nodes: DrawnNode[],
+  edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
 ): Promise<LayoutResult> {
@@ -320,7 +320,7 @@ export async function layoutWithElk(
   if (!groupingActive(nodes, settings.grouping)) {
     result = await layoutFlat(elk, members, geometry, settings)
   } else {
-    const frames = new Map<string, GraphNode[]>()
+    const frames = new Map<string, DrawnNode[]>()
     for (const n of members.nodes) {
       const key = groupKeyOf(n, settings.grouping) ?? ''
       const list = frames.get(key)

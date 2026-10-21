@@ -5,18 +5,21 @@ import type { CanvasNode } from '@/components/canvas/nodes/nodeTypes'
 import { useFileColors } from '@/hooks/useFileColors'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useModels } from '@/hooks/useModels'
+import { usePorts } from '@/hooks/usePorts'
 import { useTheme } from '@/hooks/useTheme'
 import { useViewOptions } from '@/hooks/useViewOptions'
 import { readExportColors } from '@/lib/ecore/exportColors'
 import { buildDiagramSvg } from '@/lib/ecore/export'
 import { saveDiagram, type ExportFormat } from '@/lib/ecore/saveDiagram'
+import { portPredicate } from '@/lib/ecore/ports'
 import { computeParallel } from '@/lib/ecore/visibleGraph'
 
 export type { ExportFormat }
 
 export function useDiagramExport() {
   const { getNodes } = useReactFlow<CanvasNode, DiagramEdge>()
-  const { visible, layout, shapingEdgeIds } = useDiagram()
+  const { drawn, layout, shapingEdgeIds } = useDiagram()
+  const { overrides } = usePorts()
   const { options, display } = useViewOptions()
   const { models } = useModels()
   const { theme } = useTheme()
@@ -24,7 +27,7 @@ export function useDiagramExport() {
 
   return useCallback(
     async (format: ExportFormat) => {
-      if (!visible) return
+      if (!drawn) return
       const nodes = getNodes()
         .flatMap((n) => (n.type === 'fileGroup' ? [] : [n]))
         .map((n) => ({
@@ -33,9 +36,9 @@ export function useDiagramExport() {
           x: n.position.x,
           y: n.position.y,
         }))
-      const parallel = computeParallel(visible.edges)
+      const parallel = computeParallel(drawn.edges)
       // With nothing selected, "on selection" links are hidden on screen, so they stay out of the file too.
-      const edges = visible.edges.flatMap((edge) => {
+      const edges = drawn.edges.flatMap((edge) => {
         const info = parallel.get(edge.id)
         const drawn = display.otherLinks === 'show' || shapingEdgeIds.has(edge.id)
         return info && drawn ? [{ edge, parallel: info }] : []
@@ -51,6 +54,12 @@ export function useDiagramExport() {
         direction: options.direction,
         laidOut: layout?.laidOut,
         labels: display.labels,
+        isPorted: portPredicate(
+          new Map(nodes.map((n) => [n.node.id, n.node])),
+          display.ports,
+          options.grouping,
+          overrides,
+        ),
       })
       if (!svg) return
 
@@ -58,6 +67,6 @@ export function useDiagramExport() {
       const baseName = first ? first.fileName.replace(/^.*\//, '').replace(/\.[^.]+$/, '') : 'diagram'
       saveDiagram(svg, format, baseName)
     },
-    [getNodes, visible, layout, shapingEdgeIds, options, display, models, theme, hueFor],
+    [getNodes, drawn, layout, shapingEdgeIds, overrides, options, display, models, theme, hueFor],
   )
 }

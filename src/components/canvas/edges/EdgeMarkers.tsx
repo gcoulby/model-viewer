@@ -5,6 +5,7 @@ export const MARKER_IDS: Record<MarkerKind, string> = {
   diamond: 'ecore-marker-diamond',
   arrow: 'ecore-marker-arrow',
   arrowMuted: 'ecore-marker-arrow-muted',
+  arrowCycle: 'ecore-marker-arrow-cycle',
 }
 
 /** Marker definitions referenced by every edge, drawn once. */
@@ -68,6 +69,25 @@ export function EdgeMarkers() {
             d="M1 1L10 5L1 9"
             className="fill-none stroke-muted-foreground"
             strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+        {/* Drawn at both ends of a two-way dependency, so it is turned around at the start. */}
+        <marker
+          id={MARKER_IDS.arrowCycle}
+          viewBox="0 0 11 10"
+          refX="10"
+          refY="5"
+          markerWidth="11"
+          markerHeight="10"
+          markerUnits="userSpaceOnUse"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M1 1L10 5L1 9"
+            className="fill-none stroke-cycle"
+            strokeWidth="1.4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />

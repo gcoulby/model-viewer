@@ -9,11 +9,15 @@ import {
 } from '@xyflow/react'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useLoadFiles } from '@/hooks/useLoadFiles'
+import { usePorts } from '@/hooks/usePorts'
+import { useScope } from '@/hooks/useScope'
 import { useSelection } from '@/hooks/useSelection'
 import { useTheme } from '@/hooks/useTheme'
 import { useViewOptions } from '@/hooks/useViewOptions'
 import type { Box } from '@/lib/ecore/edgeGeometry'
 import { computeGroupBoxes, groupKeyOf } from '@/lib/ecore/groups'
+import { portPredicate } from '@/lib/ecore/ports'
+import { portTagTexts } from '@/lib/ecore/portTag'
 import { routeEdges } from '@/lib/ecore/routing'
 import { neighbourhood } from '@/lib/ecore/visibleGraph'
 import { cn } from '@/lib/utils'
@@ -35,7 +39,9 @@ const CENTRE_ZOOM = 0.7
 
 export function DiagramCanvas() {
   const { theme } = useTheme()
-  const { graph, visible, layout, nodes: layoutNodesList, edges, shapingEdgeIds, toggleCollapsed } = useDiagram()
+  const { graph, drawn, layout, nodes: layoutNodesList, edges, shapingEdgeIds, toggleCollapsed } = useDiagram()
+  const { overrides } = usePorts()
+  const { toggleFolded } = useScope()
   const { options, display } = useViewOptions()
   const { selectedId, centerRequest, select, clear } = useSelection()
   const { loadDropped } = useLoadFiles()
@@ -98,10 +104,13 @@ export function DiagramCanvas() {
     )
   }, [selectedId, setNodes])
 
-  const focus = useMemo(
-    () => (graph && visible && selectedId && visible.nodeIds.has(selectedId) ? neighbourhood(visible.edges, selectedId) : null),
-    [graph, visible, selectedId],
-  )
+  // A selected box lights up its neighbours; a selected link lights up itself and its two ends.
+  const focus = useMemo(() => {
+    if (!drawn || !selectedId) return null
+    if (drawn.nodeIds.has(selectedId)) return neighbourhood(drawn.edges, selectedId)
+    const edge = drawn.edges.find((e) => e.id === selectedId)
+    return edge ? { nodeIds: new Set([edge.from, edge.to]), edgeIds: new Set([edge.id]) } : null
+  }, [drawn, selectedId])
 
   const displayNodes = useMemo<CanvasNode[]>(() => {
     const groups = computeGroupBoxes(
@@ -147,28 +156,36 @@ export function DiagramCanvas() {
         },
       ]),
     )
-    const drawn = edges.filter(
+    const shown = edges.filter(
       (e) => display.otherLinks === 'show' || shapingEdgeIds.has(e.id) || !!focus?.edgeIds.has(e.id),
     )
+    const byId = new Map(nodes.map((n) => [n.id, n.data.node]))
+    const nameOf = (id: string) => byId.get(id)?.name ?? '?'
     const paths = routeEdges(
       boxes,
-      drawn.flatMap((e) => (e.data ? [{ edge: e.data.edge, parallel: e.data.parallel }] : [])),
+      shown.flatMap((e) => (e.data ? [{ edge: e.data.edge, parallel: e.data.parallel }] : [])),
       display.routing,
       options.direction,
       layout?.laidOut,
+      portPredicate(byId, display.ports, options.grouping, overrides),
     )
-    return drawn.flatMap((e) =>
-      e.data
-        ? [
-            {
-              ...e,
-              data: { ...e.data, path: paths.get(e.id) ?? null, labels: display.labels },
-              className: focus && !focus.edgeIds.has(e.id) ? DIMMED : FADE,
-            },
-          ]
-        : [],
-    )
-  }, [nodes, edges, focus, display, shapingEdgeIds, options.direction, layout])
+    return shown.flatMap((e) => {
+      if (!e.data) return []
+      const path = paths.get(e.id) ?? null
+      return [
+        {
+          ...e,
+          data: {
+            ...e.data,
+            path,
+            labels: display.labels,
+            portTexts: path?.ports ? portTagTexts(e.data.edge, nameOf) : null,
+          },
+          className: focus && !focus.edgeIds.has(e.id) ? DIMMED : FADE,
+        },
+      ]
+    })
+  }, [nodes, edges, focus, display, shapingEdgeIds, options.direction, options.grouping, overrides, layout])
 
   // The file boxes are derived from their nodes, so dragging one moves the nodes inside it. Other
   // changes to a box (size, selection) mean nothing to the state and are dropped.
@@ -230,12 +247,16 @@ export function DiagramCanvas() {
           // A modifier click is adding to the selection, which the detail panel cannot show.
           if (node.type !== 'fileGroup' && !event.metaKey && !event.ctrlKey && !event.shiftKey) select(node.id)
         }}
+        onEdgeClick={(_, edge) => select(edge.id)}
         onSelectionStart={clear}
         elementsSelectable
         selectionOnDrag={tool === 'select'}
         panOnDrag={tool === 'select' ? [1, 2] : true}
         onNodeDoubleClick={(_, node) => {
-          if (node.type !== 'fileGroup' && node.data.node.kind !== 'external') toggleCollapsed(node.id)
+          if (node.type === 'fileGroup') return
+          const shown = node.data.node
+          if (shown.kind === 'package') toggleFolded([shown.package.scopeId])
+          else if (shown.kind !== 'external') toggleCollapsed(node.id)
         }}
         onPaneClick={clear}
         colorMode={theme}

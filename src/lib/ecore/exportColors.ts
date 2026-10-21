@@ -11,6 +11,7 @@ export function readExportColors(): ExportColors {
     muted: read('--muted-foreground'),
     edge: read('--edge'),
     halo: read('--halo'),
+    cycle: read('--cycle'),
     selection: read('--selection'),
   }
 }

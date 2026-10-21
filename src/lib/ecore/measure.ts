@@ -1,4 +1,4 @@
-import type { GraphNode } from '@/types/graph'
+import type { DrawnNode, PackageBlockNode } from '@/types/graph'
 import type { NodeGeometry, ViewOptions } from '@/types/view'
 import { attributeRow, capRows, operationRow, stereotypeOf } from './format'
 
@@ -57,7 +57,20 @@ export async function waitForFonts(): Promise<void> {
   await Promise.race([loading, new Promise((resolve) => setTimeout(resolve, FONT_LOAD_TIMEOUT_MS))])
 }
 
-function compartmentsOf(node: GraphNode, options: ViewOptions): string[][] {
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/** What a collapsed package holds, and how many links cross its edge each way. */
+function packageRows(block: PackageBlockNode): string[][] {
+  const { classes, enums, dataTypes } = block.counts
+  const contents = [
+    classes ? plural(classes, 'class', 'classes') : '',
+    enums ? plural(enums, 'enum', 'enums') : '',
+    dataTypes ? plural(dataTypes, 'data type', 'data types') : '',
+  ].filter(Boolean)
+  return [contents, [`${block.incoming} in · ${block.outgoing} out`]]
+}
+
+function compartmentsOf(node: DrawnNode, options: ViewOptions): string[][] {
   const compartments: string[][] = []
   switch (node.kind) {
     case 'class':
@@ -73,12 +86,15 @@ function compartmentsOf(node: GraphNode, options: ViewOptions): string[][] {
     case 'external':
       compartments.push([node.source])
       break
+    case 'package':
+      compartments.push(...packageRows(node))
+      break
   }
   return compartments
 }
 
 export function computeGeometry(
-  node: GraphNode,
+  node: DrawnNode,
   options: ViewOptions,
   collapsed: boolean,
   measure: TextMeasurer,

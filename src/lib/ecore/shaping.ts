@@ -1,7 +1,7 @@
-import type { GraphEdge, GraphNode } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutSettings } from '@/types/view'
 
-function modeIncludes(edge: GraphEdge, mode: LayoutSettings['layoutMode']): boolean {
+function modeIncludes(edge: DrawnEdge, mode: LayoutSettings['layoutMode']): boolean {
   switch (mode) {
     case 'layered':
       return true
@@ -17,7 +17,7 @@ function modeIncludes(edge: GraphEdge, mode: LayoutSettings['layoutMode']): bool
  * that none of the mode's links reach is placed by all of its own links instead, so it lands beside the
  * boxes it relates to rather than in a heap of strays.
  */
-export function layoutEdges(nodes: GraphNode[], edges: GraphEdge[], settings: LayoutSettings): GraphEdge[] {
+export function layoutEdges(nodes: DrawnNode[], edges: DrawnEdge[], settings: LayoutSettings): DrawnEdge[] {
   if (settings.algorithm === 'grid') return []
   const chosen = edges.filter((e) => modeIncludes(e, settings.layoutMode))
   if (!settings.pullIn || chosen.length === edges.length) return chosen

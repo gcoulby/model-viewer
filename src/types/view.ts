@@ -38,11 +38,18 @@ export interface ViewOptions {
   pullIn: boolean
 }
 
-/** Options that change how links are drawn but never where boxes go. */
+/**
+ * Which links are drawn as a pair of port tags instead of a line: none, those between frames (files or
+ * packages; these also stop shaping the layout, so the frames separate), or those longer than a screen or so.
+ */
+export type PortMode = 'none' | 'frames' | 'long'
+
+/** Options that change how links are drawn. Only `ports: 'frames'` also changes where boxes go. */
 export interface EdgeDisplay {
   routing: EdgeRouting
   otherLinks: OtherLinks
   labels: boolean
+  ports: PortMode
 }
 
 /** The part of `ViewOptions` the layout engines read. */

@@ -8,6 +8,7 @@ import type {
   LayoutSettings,
   LayoutSpacing,
   OtherLinks,
+  PortMode,
 } from '@/types/view'
 
 export interface Choice<T extends string> {
@@ -126,7 +127,28 @@ export const DEFAULT_LAYOUT: LayoutSettings = {
   pullIn: true,
 }
 
-export const DEFAULT_EDGE_DISPLAY: EdgeDisplay = { routing: 'routed', otherLinks: 'show', labels: true }
+export type DetailLevel = 'types' | 'packages'
+
+export const DETAIL_LEVELS: Choice<DetailLevel>[] = [
+  { value: 'types', label: 'Types', description: 'Every class, enum and data type as its own box.' },
+  {
+    value: 'packages',
+    label: 'Packages',
+    description: 'Each package as one box, with the links between them counted. Expand any from the tree.',
+  },
+]
+
+export const PORT_MODES: Choice<PortMode>[] = [
+  { value: 'none', label: 'None', description: 'Every link is drawn as a line. You can still port single links from their details.' },
+  {
+    value: 'frames',
+    label: 'Between frames',
+    description: 'Links between files or packages become port tags, and the frames are laid out apart.',
+  },
+  { value: 'long', label: 'Long links', description: 'Links that cross a long way become port tags.' },
+]
+
+export const DEFAULT_EDGE_DISPLAY: EdgeDisplay = { routing: 'routed', otherLinks: 'show', labels: true, ports: 'none' }
 
 export function spacingFactor(spacing: LayoutSpacing): number {
   return LAYOUT_SPACINGS.find((s) => s.value === spacing)?.factor ?? 1

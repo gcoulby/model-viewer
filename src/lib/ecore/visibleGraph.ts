@@ -1,4 +1,4 @@
-import type { EdgeKind, GraphEdge, GraphNode, ModelGraph, ParallelInfo } from '@/types/graph'
+import type { DrawnEdge, EdgeKind, GraphEdge, GraphNode, ModelGraph, ParallelInfo } from '@/types/graph'
 import type { ViewOptions } from '@/types/view'
 import { NO_SCOPE, type Scope } from './scope'
 
@@ -70,8 +70,8 @@ export function computeVisible(graph: ModelGraph, options: ViewOptions, scope: S
 }
 
 /** Numbers every edge among the edges that join the same pair of nodes (or the same node, for loops). */
-export function computeParallel(edges: GraphEdge[]): Map<string, ParallelInfo> {
-  const groups = new Map<string, GraphEdge[]>()
+export function computeParallel(edges: DrawnEdge[]): Map<string, ParallelInfo> {
+  const groups = new Map<string, DrawnEdge[]>()
   for (const e of edges) {
     const key =
       e.from === e.to ? `self|${e.from}` : e.from < e.to ? `${e.from}>${e.to}` : `${e.to}>${e.from}`
@@ -90,7 +90,7 @@ export function computeParallel(edges: GraphEdge[]): Map<string, ParallelInfo> {
 
 /** Ids of the selected node, its neighbours and the edges touching it. */
 export function neighbourhood(
-  edges: GraphEdge[],
+  edges: DrawnEdge[],
   selectedId: string,
 ): { nodeIds: Set<string>; edgeIds: Set<string> } {
   const nodeIds = new Set([selectedId])

@@ -94,12 +94,12 @@ describe('computeVisible scope', () => {
   const aIds = fileScopeIds(a)
 
   it('focuses on one file and the types it links to', () => {
-    const focus = (includeLinked: boolean): Scope => ({ focus: { ids: new Set(aIds), label: 'a', includeLinked }, hidden: new Set() })
+    const focus = (includeLinked: boolean): Scope => ({ focus: { ids: new Set(aIds), label: 'a', includeLinked }, hidden: new Set(), folded: new Set() })
     expect(names(focus(false))).toEqual(['Base', 'Lonely'])
     expect(names(focus(true))).toEqual(['Base', 'Child', 'Lonely'])
   })
 
   it('hides a package', () => {
-    expect(names({ focus: null, hidden: new Set(aIds) })).toEqual(['Child', 'Other'])
+    expect(names({ focus: null, hidden: new Set(aIds), folded: new Set() })).toEqual(['Child', 'Other'])
   })
 })

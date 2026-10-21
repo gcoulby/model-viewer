@@ -9,12 +9,14 @@ interface NodeFrameProps {
   data: DiagramNodeData
   selected: boolean
   dashed?: boolean
+  /** Draws a second card behind the box, for a collapsed package. */
+  stacked?: boolean
 }
 
 const HANDLE_CLASS = 'pointer-events-none !size-0 !min-h-0 !min-w-0 !border-0 !opacity-0'
 
 /** Header, stereotype and compartments shared by every node type. */
-export function NodeFrame({ data, selected, dashed = false }: NodeFrameProps) {
+export function NodeFrame({ data, selected, dashed = false, stacked = false }: NodeFrameProps) {
   const { theme } = useTheme()
   const { hueFor } = useFileColors()
   const { node, geometry } = data
@@ -32,8 +34,15 @@ export function NodeFrame({ data, selected, dashed = false }: NodeFrameProps) {
         width: geometry.width,
         height: geometry.height,
         borderColor: selected ? 'var(--selection)' : paint.stroke,
+        boxShadow: stacked ? `5px 5px 0 -1.2px var(--node), 5px 5px 0 0 ${paint.stroke}` : undefined,
       }}
-      title={node.kind === 'external' ? node.name : `${node.name}  (${node.package.fullName})`}
+      title={
+        node.kind === 'external'
+          ? node.name
+          : node.kind === 'package'
+            ? `${node.name}: double-click to expand`
+            : `${node.name}  (${node.package.fullName})`
+      }
     >
       <Handle type="target" position={Position.Top} isConnectable={false} className={HANDLE_CLASS} />
       <Handle type="source" position={Position.Top} isConnectable={false} className={HANDLE_CLASS} />

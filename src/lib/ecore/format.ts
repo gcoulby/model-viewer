@@ -1,5 +1,6 @@
 import type { Multiplicity } from '@/types/ecore'
 import type {
+  DrawnNode,
   GraphNode,
   ResolvedAttribute,
   ResolvedOperation,
@@ -48,7 +49,7 @@ export function capRows(rows: string[]): string[] {
     : rows
 }
 
-export function stereotypeOf(node: GraphNode): string {
+export function stereotypeOf(node: DrawnNode): string {
   switch (node.kind) {
     case 'class':
       return node.interface ? '«interface»' : node.abstract ? '«abstract»' : ''
@@ -58,10 +59,12 @@ export function stereotypeOf(node: GraphNode): string {
       return '«datatype»'
     case 'external':
       return '«external»'
+    case 'package':
+      return '«package»'
   }
 }
 
-export function kindLabel(node: GraphNode): string {
+export function kindLabel(node: DrawnNode): string {
   switch (node.kind) {
     case 'class':
       return node.interface ? 'Interface' : node.abstract ? 'Abstract class' : 'Class'
@@ -71,6 +74,8 @@ export function kindLabel(node: GraphNode): string {
       return 'Data type'
     case 'external':
       return 'External type'
+    case 'package':
+      return 'Collapsed package'
   }
 }
 

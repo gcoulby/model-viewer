@@ -5,11 +5,12 @@ import { useScope } from '@/hooks/useScope'
 import { useTheme } from '@/hooks/useTheme'
 import { useTreeOpen } from '@/hooks/useTreeOpen'
 import { dotColor } from '@/lib/ecore/paint'
-import { packageScopeIds } from '@/lib/ecore/scope'
+import { packageScopeIds, scopeIdOf } from '@/lib/ecore/scope'
 import type { TreePackage } from '@/lib/ecore/treeModel'
 import { cn } from '@/lib/utils'
 import type { ParsedModel } from '@/types/ecore'
 import { ModelTreePackageContents } from './ModelTreePackageContents'
+import { PackageFoldButton } from './PackageFoldButton'
 import { PackageVisibilityButton } from './PackageVisibilityButton'
 
 interface ModelTreePackageProps {
@@ -51,6 +52,7 @@ export function ModelTreePackage({ tree, model }: ModelTreePackageProps) {
           </span>
           <span className="font-mono text-[11.5px] font-normal text-muted-foreground">{tree.count}</span>
         </button>
+        <PackageFoldButton scopeId={scopeIdOf(model, tree.pkg)} name={tree.pkg.fullName} />
         <PackageVisibilityButton ids={ids} name={tree.pkg.fullName} />
       </div>
       <CollapsibleContent className="ml-3">

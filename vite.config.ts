@@ -26,6 +26,8 @@ function siteUrl(): Plugin {
 export default defineConfig({
   base: BASE,
   plugins: [react(), tailwindcss(), siteUrl()],
+  // ELK is imported on demand; bundling it up front stops the dev server re-optimising it mid-session.
+  optimizeDeps: { include: ['elkjs/lib/elk-api'] },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

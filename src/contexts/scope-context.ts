@@ -10,6 +10,10 @@ export interface ScopeContextValue extends Scope {
   toggleHidden: (ids: string[]) => void
   /** Shows every hidden package, keeping any focus. */
   showHidden: () => void
+  /** Collapses the packages into one box each, or expands them if they all are collapsed already. */
+  toggleFolded: (ids: string[]) => void
+  /** Collapses exactly these packages and expands every other one. */
+  setFolded: (ids: string[]) => void
   /** Makes one package visible again, dropping a focus that leaves it out. */
   reveal: (scopeId: string) => void
 }

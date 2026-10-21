@@ -115,3 +115,35 @@ export interface ParallelInfo {
   count: number
   flip: 1 | -1
 }
+
+/** A collapsed package drawn as one box standing in for the types inside it. */
+export interface PackageBlockNode {
+  kind: 'package'
+  id: string
+  name: string
+  package: PackageInfo
+  /** The visible types folded into the block. */
+  memberIds: string[]
+  counts: { classes: number; enums: number; dataTypes: number }
+  /** Links leaving and entering the block, not counting links inside it. */
+  outgoing: number
+  incoming: number
+  superIds: string[]
+  subIds: string[]
+}
+
+/** Every link between two boxes where at least one is a collapsed package, as one line. */
+export interface DependencyEdge {
+  id: string
+  kind: 'dependency'
+  from: string
+  to: string
+  /** Links running from `from` to `to`. */
+  forward: GraphEdge[]
+  /** Links running the other way. */
+  back: GraphEdge[]
+}
+
+/** What the diagram draws: the model's types and links, plus collapsed packages and their links. */
+export type DrawnNode = GraphNode | PackageBlockNode
+export type DrawnEdge = GraphEdge | DependencyEdge
