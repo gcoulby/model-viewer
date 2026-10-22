@@ -3,7 +3,7 @@ import { ViewOptionsContext } from '@/contexts/view-options-context'
 import { DEFAULT_EDGE_DISPLAY } from '@/data/layoutOptions'
 import { defaultViewOptions, type ToggleOptionKey } from '@/data/viewOptions'
 import type { GraphNode } from '@/types/graph'
-import type { EdgeDisplay, LayoutSettings, ViewOptions } from '@/types/view'
+import type { EdgeDisplay, LayoutChoices, ViewOptions } from '@/types/view'
 
 const HIDING_OPTION: Partial<Record<GraphNode['kind'], ToggleOptionKey>> = {
   enum: 'enums',
@@ -19,7 +19,7 @@ export function ViewOptionsProvider({ children }: { children: ReactNode }) {
     setOptions((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }))
   }, [])
 
-  const setLayout = useCallback(<K extends keyof LayoutSettings>(key: K, value: LayoutSettings[K]) => {
+  const setLayout = useCallback(<K extends keyof LayoutChoices>(key: K, value: LayoutChoices[K]) => {
     setOptions((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }))
   }, [])
 

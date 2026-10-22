@@ -76,7 +76,7 @@ export function layoutWithDagre(
   )
   const blocks = keys.map((k) => layoutBlock(groups.get(k) ?? [], shaping, geometry, settings))
 
-  const gap = BLOCK_GAP * spacingFactor(settings.spacing)
+  const gap = BLOCK_GAP * spacingFactor(settings.spacing) * (settings.tagsOnly ? 0.5 : 1)
   const area = blocks.reduce((sum, b) => sum + (b.width + gap) * (b.height + gap), 0)
   const rowWidth = Math.max(...blocks.map((b) => b.width), Math.sqrt(area) * ROW_ASPECT)
 

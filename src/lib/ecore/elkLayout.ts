@@ -5,6 +5,7 @@ import type { LayoutDirection, LayoutSettings, NodeGeometry } from '@/types/view
 import type { Point } from './edgeGeometry'
 import { EXTERNAL_GROUP, GROUP_LABEL_HEIGHT, GROUP_PADDING, groupKeyOf, groupingActive } from './groups'
 import { comparePackages, type LayoutResult } from './layout'
+import { packOrder } from './portRoom'
 import { layoutEdges } from './shaping'
 
 const ELK_DIRECTION: Record<LayoutDirection, string> = { TB: 'DOWN', BT: 'UP', LR: 'RIGHT', RL: 'LEFT' }
@@ -15,26 +16,31 @@ const GROUP_PREFIX = 'group:'
 const SUBTYPES_PORT = '::subtypes'
 const COMPONENT_ASPECT = '1.6'
 const FRAME_GAP = 70
+/** How much closer boxes sit when no lines run between them. */
+const TIGHT = 0.5
 
 type ElkAlgorithm = Exclude<LayoutSettings['algorithm'], 'dagre'>
 
 function algorithmOptions(algorithm: ElkAlgorithm, settings: LayoutSettings): LayoutOptions {
   const f = spacingFactor(settings.spacing)
   const px = (n: number) => String(Math.round(n * f))
+  // With every link drawn as tags there are no lines to route between boxes, so boxes sit closer.
+  const tight = settings.tagsOnly ? TIGHT : 1
+  const gap = (n: number) => px(n * tight)
   const direction = ELK_DIRECTION[settings.direction]
   switch (algorithm) {
     case 'layered':
       return {
         'elk.algorithm': 'layered',
         'elk.direction': direction,
-        'elk.edgeRouting': 'ORTHOGONAL',
-        'elk.spacing.nodeNode': px(40),
-        'elk.layered.spacing.nodeNodeBetweenLayers': px(72),
-        'elk.spacing.edgeNode': px(18),
-        'elk.spacing.edgeEdge': px(10),
-        'elk.layered.spacing.edgeNodeBetweenLayers': px(18),
-        'elk.layered.spacing.edgeEdgeBetweenLayers': px(10),
-        'elk.spacing.componentComponent': px(60),
+        'elk.edgeRouting': settings.tagsOnly ? 'POLYLINE' : 'ORTHOGONAL',
+        'elk.spacing.nodeNode': gap(40),
+        'elk.layered.spacing.nodeNodeBetweenLayers': gap(72),
+        'elk.spacing.edgeNode': settings.tagsOnly ? '0' : px(18),
+        'elk.spacing.edgeEdge': settings.tagsOnly ? '0' : px(10),
+        'elk.layered.spacing.edgeNodeBetweenLayers': settings.tagsOnly ? '0' : px(18),
+        'elk.layered.spacing.edgeEdgeBetweenLayers': settings.tagsOnly ? '0' : px(10),
+        'elk.spacing.componentComponent': gap(60),
         'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
         'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
         'elk.layered.thoroughness': '10',
@@ -44,17 +50,17 @@ function algorithmOptions(algorithm: ElkAlgorithm, settings: LayoutSettings): La
       return {
         'elk.algorithm': 'mrtree',
         'elk.direction': direction,
-        'elk.spacing.nodeNode': px(36),
+        'elk.spacing.nodeNode': gap(36),
         'elk.mrtree.edgeRoutingMode': 'AVOID_OVERLAP',
         'elk.mrtree.searchOrder': 'DFS',
-        'elk.spacing.componentComponent': px(60),
+        'elk.spacing.componentComponent': gap(60),
         'elk.aspectRatio': COMPONENT_ASPECT,
       }
     case 'stress':
       return {
         'elk.algorithm': 'stress',
-        'elk.stress.desiredEdgeLength': px(220),
-        'elk.spacing.nodeNode': px(48),
+        'elk.stress.desiredEdgeLength': gap(220),
+        'elk.spacing.nodeNode': gap(48),
       }
     case 'force':
       return {
@@ -62,21 +68,21 @@ function algorithmOptions(algorithm: ElkAlgorithm, settings: LayoutSettings): La
         'elk.force.model': 'EADES',
         'elk.force.repulsion': '1',
         'elk.force.iterations': '400',
-        'elk.spacing.nodeNode': px(20),
-        'elk.spacing.componentComponent': px(60),
+        'elk.spacing.nodeNode': gap(20),
+        'elk.spacing.componentComponent': gap(60),
         'elk.aspectRatio': COMPONENT_ASPECT,
       }
     case 'radial':
       return {
         'elk.algorithm': 'radial',
-        'elk.spacing.nodeNode': px(40),
+        'elk.spacing.nodeNode': gap(40),
         'elk.radial.compactor': 'WEDGE_COMPACTION',
         'elk.radial.compactionStepSize': '1',
       }
     case 'grid':
       return {
         'elk.algorithm': 'rectpacking',
-        'elk.spacing.nodeNode': px(34),
+        'elk.spacing.nodeNode': gap(34),
         'elk.aspectRatio': COMPONENT_ASPECT,
         'elk.rectpacking.trybox': 'false',
       }
@@ -168,7 +174,7 @@ async function removeOverlaps(
   positions: Map<string, Point>,
   settings: LayoutSettings,
 ): Promise<Map<string, Point>> {
-  const gap = String(Math.round(32 * spacingFactor(settings.spacing)))
+  const gap = String(Math.round(32 * spacingFactor(settings.spacing) * (settings.tagsOnly ? TIGHT : 1)))
   const laidOut = await elk.layout({
     id: 'root',
     layoutOptions: { 'elk.algorithm': 'sporeOverlap', 'elk.spacing.nodeNode': gap, 'elk.overlapRemoval.maxIterations': '200' },
@@ -282,7 +288,9 @@ async function layoutFramesApart(
     id: 'root',
     layoutOptions: {
       ...algorithmOptions(arrangement, settings),
-      'elk.spacing.nodeNode': String(Math.round(FRAME_GAP * spacingFactor(settings.spacing))),
+      'elk.spacing.nodeNode': String(
+        Math.round(FRAME_GAP * spacingFactor(settings.spacing) * (settings.tagsOnly ? TIGHT : 1)),
+      ),
     },
     children: inner.map((f) => ({
       id: GROUP_PREFIX + f.key,
@@ -312,8 +320,9 @@ export async function layoutWithElk(
   geometry: Map<string, NodeGeometry>,
   settings: LayoutSettings,
 ): Promise<LayoutResult> {
+  const sorted = [...nodes].sort(comparePackages)
   const members: Members = {
-    nodes: [...nodes].sort(comparePackages),
+    nodes: settings.tagsOnly ? packOrder(sorted, edges) : sorted,
     edges: layoutEdges(nodes, edges, settings).filter((e) => e.from !== e.to),
   }
   let result: LayoutResult

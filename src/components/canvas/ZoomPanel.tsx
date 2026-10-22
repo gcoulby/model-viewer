@@ -3,6 +3,8 @@ import { Panel, useReactFlow, useStore } from '@xyflow/react'
 import { Button } from '@/components/ui/button'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useDiagram } from '@/hooks/useDiagram'
+import { usePorts } from '@/hooks/usePorts'
+import { useViewOptions } from '@/hooks/useViewOptions'
 import type { DiagramEdge } from './edges/edgeTypes'
 import { FIT_OPTIONS } from './fitOptions'
 import type { CanvasNode } from './nodes/nodeTypes'
@@ -20,6 +22,9 @@ export function ZoomPanel({ tool, onToolChange }: ZoomPanelProps) {
   const { zoomTo, getZoom, fitView } = useReactFlow<CanvasNode, DiagramEdge>()
   const zoom = useStore((s) => s.transform[2])
   const { relayout, graph, layoutStale } = useDiagram()
+  const { display, setDisplay } = useViewOptions()
+  const { overrides } = usePorts()
+  const portsInUse = display.ports !== 'none' || [...overrides.values()].some(Boolean)
   const isMobile = useIsMobile()
 
   return (
@@ -59,6 +64,16 @@ export function ZoomPanel({ tool, onToolChange }: ZoomPanelProps) {
       <Button variant="ghost" onClick={() => void fitView(FIT_OPTIONS)}>
         Fit
       </Button>
+      {portsInUse && !display.portRoom && (
+        <Button
+          variant="ghost"
+          disabled={!graph}
+          onClick={() => setDisplay('portRoom', true)}
+          title="Lay out again with room beside each box for its port tags, packed closer where no lines need routing"
+        >
+          Lay out for ports
+        </Button>
+      )}
       <Button
         variant={layoutStale ? 'secondary' : 'ghost'}
         disabled={!graph}

@@ -18,8 +18,8 @@ export function PortsControl() {
       />
       <div className="mt-1.5">
         <LabelledCheckbox
-          label="Make room for tags"
-          title="Outgoing tags go on one side of each box and incoming tags on the other, and boxes are spaced so no tag covers a box or another tag."
+          label="Lay out for ports"
+          title="Outgoing tags go on one side of each box and incoming tags on the other, and boxes are spaced so no tag covers a box or another tag. With every link ported, boxes are packed closer, as there are no lines to make room for."
           checked={display.portRoom}
           onChange={(v) => setDisplay('portRoom', v)}
         />

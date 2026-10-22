@@ -15,9 +15,11 @@ export async function runLayout(
   nodes: DrawnNode[],
   edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
-  settings: LayoutSettings,
+  requested: LayoutSettings,
   loadElk: () => Promise<ELK>,
 ): Promise<LayoutOutcome> {
+  // With every link drawn as tags, nothing needs rows or routes, so boxes are packed like a schematic sheet.
+  const settings: LayoutSettings = requested.tagsOnly ? { ...requested, algorithm: 'grid' } : requested
   if (settings.algorithm === 'dagre') return { result: layoutWithDagre(nodes, edges, geometry, settings), failure: null }
   try {
     const elk = await loadElk()

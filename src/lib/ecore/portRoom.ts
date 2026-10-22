@@ -1,4 +1,4 @@
-import type { DrawnEdge } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { LayoutDirection, NodeGeometry } from '@/types/view'
 import type { Position } from './layout'
 import { PORT_TAG_HEIGHT, portTagLength } from './portTag'
@@ -14,7 +14,8 @@ export interface Margins {
 
 /**
  * Where tags go when the layout makes room for them: as on a schematic, links leave from one side and
- * arrive on the opposite one, across the layout's main axis so they stay clear of the links it routes.
+ * arrive on the opposite one. That is across the layout's main axis, clear of the lines it routes, or
+ * along it when there are no lines, where upright tags pack side by side between the rows.
  */
 export interface PortRoom {
   outSide: PortSide
@@ -35,10 +36,9 @@ const ROOM_GAP = 10
 /** Keeps the outermost tag clear of the box corner. */
 export const ROOM_SIDE_MARGIN = 10
 
-export function roomSides(direction: LayoutDirection): { outSide: PortSide; inSide: PortSide } {
-  return direction === 'TB' || direction === 'BT'
-    ? { outSide: 'right', inSide: 'left' }
-    : { outSide: 'bottom', inSide: 'top' }
+export function roomSides(direction: LayoutDirection, tagsOnly = false): { outSide: PortSide; inSide: PortSide } {
+  const vertical = direction === 'TB' || direction === 'BT'
+  return vertical !== tagsOnly ? { outSide: 'right', inSide: 'left' } : { outSide: 'bottom', inSide: 'top' }
 }
 
 const isAcross = (side: PortSide) => side === 'top' || side === 'bottom'
@@ -55,8 +55,9 @@ export function portMargins(
   geometry: ReadonlyMap<string, NodeGeometry>,
   direction: LayoutDirection,
   textsOf: (edge: DrawnEdge) => { start: string; end: string },
+  tagsOnly = false,
 ): PortRoom {
-  const { outSide, inSide } = roomSides(direction)
+  const { outSide, inSide } = roomSides(direction, tagsOnly)
   const sides = new Map<string, { count: number; longest: number }>()
   const add = (nodeId: string, side: PortSide, text: string) => {
     const key = `${nodeId}|${side}`
@@ -121,4 +122,43 @@ export function deflatePositions(
     moved.set(id, m ? { x: p.x + m.left, y: p.y + m.top } : p)
   })
   return moved
+}
+
+/**
+ * An order for packing boxes when every link is a tag: the busiest box first, then each box's linked
+ * boxes straight after it, so boxes that talk to each other land in the same part of the sheet.
+ */
+export function packOrder(nodes: DrawnNode[], edges: DrawnEdge[]): DrawnNode[] {
+  const index = new Map(nodes.map((n, i) => [n.id, i]))
+  const near = new Map<string, string[]>(nodes.map((n) => [n.id, []]))
+  for (const e of edges) {
+    if (e.from === e.to || !index.has(e.from) || !index.has(e.to)) continue
+    near.get(e.from)?.push(e.to)
+    near.get(e.to)?.push(e.from)
+  }
+  const at = (id: string) => index.get(id) ?? 0
+  for (const list of near.values()) list.sort((a, b) => at(a) - at(b))
+  const degree = (id: string) => near.get(id)?.length ?? 0
+
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const order: DrawnNode[] = []
+  const seen = new Set<string>()
+  const emit = (id: string) => {
+    seen.add(id)
+    const node = byId.get(id)
+    if (node) order.push(node)
+  }
+  const starts = [...nodes].sort((a, b) => degree(b.id) - degree(a.id) || at(a.id) - at(b.id))
+  for (const start of starts) {
+    if (seen.has(start.id)) continue
+    emit(start.id)
+    const stack = [start.id]
+    while (stack.length) {
+      const id = stack.pop() ?? ''
+      const fresh = [...new Set(near.get(id))].filter((m) => !seen.has(m))
+      fresh.forEach(emit)
+      stack.push(...fresh.toReversed())
+    }
+  }
+  return order
 }

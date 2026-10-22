@@ -133,8 +133,15 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
         }
       }
       if (!tagged.size) return { ...(first ?? (await runLayout(drawn.nodes, edges, geometry, options, loadElk))), room: null }
-      const room: PortRoom = portMargins(drawn.edges, tagged, geometry, options.direction, textsOf)
-      const grown = await runLayout(drawn.nodes, edges, inflateGeometry(geometry, room.margins), options, loadElk)
+      const tagsOnly = edges.every((e) => tagged.has(e.id) || e.from === e.to)
+      const room: PortRoom = portMargins(drawn.edges, tagged, geometry, options.direction, textsOf, tagsOnly)
+      const grown = await runLayout(
+        drawn.nodes,
+        edges,
+        inflateGeometry(geometry, room.margins),
+        { ...options, tagsOnly },
+        loadElk,
+      )
       // Routes found for the grown boxes miss the real ones, so links at boxes with tags are drawn square.
       const routes = new Map(grown.result.routes)
       for (const edge of edges) {

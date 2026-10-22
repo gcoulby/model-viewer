@@ -55,11 +55,14 @@ export interface EdgeDisplay {
   portRoom: boolean
 }
 
-/** The part of `ViewOptions` the layout engines read. */
-export type LayoutSettings = Pick<
-  ViewOptions,
-  'algorithm' | 'direction' | 'layoutMode' | 'grouping' | 'spacing' | 'pullIn'
->
+/** The layout choices in `ViewOptions`. */
+export type LayoutChoices = Pick<ViewOptions, 'algorithm' | 'direction' | 'layoutMode' | 'grouping' | 'spacing' | 'pullIn'>
+
+/** What the layout engines read: the layout choices, and what the drawing asks of them. */
+export type LayoutSettings = LayoutChoices & {
+  /** Every link that places boxes is drawn as port tags, so no room is left between boxes for lines. */
+  tagsOnly?: boolean
+}
 
 export interface NodeGeometry {
   width: number

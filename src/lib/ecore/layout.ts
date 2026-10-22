@@ -18,6 +18,8 @@ export interface LayoutResult {
 const NODE_SEP = 48
 const RANK_SEP = 90
 const GRID_GAP = 34
+/** How much closer boxes sit when no lines run between them. */
+const TIGHT = 0.5
 const GRID_MIN_WIDTH = 900
 const GRID_FALLBACK_WIDTH = 1400
 const GRID_CLEARANCE = 90
@@ -75,11 +77,12 @@ export function layoutDagre(
   nodes: DrawnNode[],
   edges: DrawnEdge[],
   geometry: Map<string, NodeGeometry>,
-  settings: Pick<LayoutSettings, 'direction' | 'spacing' | 'algorithm'>,
+  settings: Pick<LayoutSettings, 'direction' | 'spacing' | 'algorithm' | 'tagsOnly'>,
 ): LayoutResult {
   const positions = new Map<string, Position>()
   const routes = new Map<string, Point[]>()
-  const factor = spacingFactor(settings.spacing)
+  // With every link drawn as tags there are no lines to route between boxes, so boxes sit closer.
+  const factor = spacingFactor(settings.spacing) * (settings.tagsOnly ? TIGHT : 1)
   const gridGap = GRID_GAP * factor
   const compare = settings.algorithm === 'grid' ? comparePackages : compareNodes
   const linked = new Set<string>()

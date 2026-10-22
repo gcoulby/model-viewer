@@ -7,7 +7,7 @@ import type { Box } from '../edgeGeometry'
 import { blockIdOf, foldPackages } from '../fold'
 import { parseModel } from '../parse'
 import { portedBeforeLayout, portPredicate } from '../ports'
-import { deflatePositions, inflateGeometry, portMargins, ROOM_PORT_STEP } from '../portRoom'
+import { deflatePositions, inflateGeometry, packOrder, portMargins, roomSides, ROOM_PORT_STEP } from '../portRoom'
 import { portTagLength, portTagShape, portTagTexts } from '../portTag'
 import { routeEdges } from '../routing'
 import { computeGeometry, createTextMeasurer } from '../measure'
@@ -155,6 +155,18 @@ describe('room for ports', () => {
     expect(b1.left).toBeGreaterThan(0)
     expect(b1.right).toBeGreaterThan(0)
     expect(portMargins(visible.edges, ported, geometry, 'LR', textsOf).outSide).toBe('bottom')
+  })
+
+  it('puts tags between the rows when there are no lines to keep clear of', () => {
+    expect(roomSides('TB', true)).toEqual({ outSide: 'bottom', inSide: 'top' })
+    expect(roomSides('LR', true)).toEqual({ outSide: 'right', inSide: 'left' })
+  })
+
+  it('packs the busiest box first, with its linked boxes straight after it', () => {
+    const order = packOrder(visible.nodes, visible.edges).map((n) => n.name)
+    expect(order).toHaveLength(visible.nodes.length)
+    // A1 and B1 have three links each and A2 two; A1 wins the tie by name, and both its neighbours follow it.
+    expect(order).toEqual(['A1', 'A2', 'B1'])
   })
 
   it('grows boxes for layout and puts them back', () => {
