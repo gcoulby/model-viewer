@@ -64,7 +64,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
   const portRoom = display.portRoom
   // The port mode only moves boxes when it decides ports before layout, or when room is kept for long links.
   const portLayout: PortMode =
-    display.ports === 'frames' ? 'frames' : display.ports === 'long' && portRoom ? 'long' : 'none'
+    display.ports === 'frames' ? 'frames' : portRoom ? display.ports : 'none'
   const fontsReady = useFontsReady()
   const measure = useMemo(createTextMeasurer, [])
   const [relayoutCount, setRelayoutCount] = useState(0)
@@ -115,11 +115,16 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     // Making room for tags lays the boxes out grown by the space their tags need. Long links are only known
     // once boxes are placed, so for those a first layout finds them and a second makes room.
     const place = async () => {
-      let outcome = await runLayout(drawn.nodes, edges, geometry, options, loadElk)
-      if (!portRoom) return { ...outcome, room: null }
+      if (!portRoom) return { ...(await runLayout(drawn.nodes, edges, geometry, options, loadElk)), room: null }
       const tagged = new Set(ported)
-      if (portLayout === 'long') {
-        const boxes = boxesOf(outcome.result.positions)
+      const first = portLayout === 'all' ? null : await runLayout(drawn.nodes, edges, geometry, options, loadElk)
+      if (portLayout === 'all') {
+        const isPorted = portPredicate(nodesById, 'all', options.grouping, overrides)
+        const anywhere: Box = { x: 0, y: 0, width: 0, height: 0 }
+        for (const edge of drawn.edges) if (isPorted(edge, anywhere, anywhere)) tagged.add(edge.id)
+      }
+      if (first && portLayout === 'long') {
+        const boxes = boxesOf(first.result.positions)
         const isPorted = portPredicate(nodesById, 'long', options.grouping, overrides)
         for (const edge of drawn.edges) {
           const from = boxes.get(edge.from)
@@ -127,7 +132,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
           if (from && to && isPorted(edge, from, to)) tagged.add(edge.id)
         }
       }
-      if (!tagged.size) return { ...outcome, room: null }
+      if (!tagged.size) return { ...(first ?? (await runLayout(drawn.nodes, edges, geometry, options, loadElk))), room: null }
       const room: PortRoom = portMargins(drawn.edges, tagged, geometry, options.direction, textsOf)
       const grown = await runLayout(drawn.nodes, edges, inflateGeometry(geometry, room.margins), options, loadElk)
       // Routes found for the grown boxes miss the real ones, so links at boxes with tags are drawn square.
@@ -135,11 +140,11 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
       for (const edge of edges) {
         if (room.margins.has(edge.from) || room.margins.has(edge.to)) routes.delete(edge.id)
       }
-      outcome = {
+      return {
         result: { positions: deflatePositions(grown.result.positions, room.margins), routes },
-        failure: grown.failure ?? outcome.failure,
+        failure: grown.failure ?? first?.failure ?? null,
+        room,
       }
-      return { ...outcome, room }
     }
 
     void place().then(({ result, failure, room }) => {

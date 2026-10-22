@@ -40,9 +40,10 @@ export interface ViewOptions {
 
 /**
  * Which links are drawn as a pair of port tags instead of a line: none, those between frames (files or
- * packages; these also stop shaping the layout, so the frames separate), or those longer than a screen or so.
+ * packages; these also stop shaping the layout, so the frames separate), those longer than a screen or so,
+ * or every link.
  */
-export type PortMode = 'none' | 'frames' | 'long'
+export type PortMode = 'none' | 'frames' | 'long' | 'all'
 
 /** Options that change how links are drawn. `ports: 'frames'` and `portRoom` also change where boxes go. */
 export interface EdgeDisplay {

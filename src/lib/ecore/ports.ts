@@ -53,6 +53,7 @@ export function portPredicate(
     if (chosen !== undefined) return chosen
     if (edge.from === edge.to) return false
     if (room) return room.ported.has(edge.id)
+    if (mode === 'all') return true
     if (mode === 'frames') return crossesFrames(edge, nodes, grouping)
     if (mode === 'long') {
       const dx = from.x + from.width / 2 - (to.x + to.width / 2)

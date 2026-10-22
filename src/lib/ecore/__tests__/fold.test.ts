@@ -103,6 +103,13 @@ describe('ports', () => {
     expect(isPorted(edge, near, { ...near, y: 200 })).toBe(false)
   })
 
+  it('ports every link but loops in all mode, unless set by hand', () => {
+    const box: Box = { x: 0, y: 0, width: 100, height: 40 }
+    const edge = visible.edges[0]!
+    expect(portPredicate(nodes, 'all', 'none', new Map())(edge, box, box)).toBe(true)
+    expect(portPredicate(nodes, 'all', 'none', new Map([[edge.id, false]]))(edge, box, box)).toBe(false)
+  })
+
   it('draws a ported link as two stubs with a tag at each end', () => {
     const edge = visible.edges.find((e) => e.kind === 'reference')!
     const boxes = new Map<string, Box>([

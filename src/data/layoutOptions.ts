@@ -139,13 +139,18 @@ export const DETAIL_LEVELS: Choice<DetailLevel>[] = [
 ]
 
 export const PORT_MODES: Choice<PortMode>[] = [
-  { value: 'none', label: 'None', description: 'Every link is drawn as a line. You can still port single links from their details.' },
+  { value: 'none', label: 'Off', description: 'Every link is drawn as a line. You can still port single links from their details.' },
   {
     value: 'frames',
-    label: 'Between frames',
+    label: 'Frames',
     description: 'Links between files or packages become port tags, and the frames are laid out apart.',
   },
-  { value: 'long', label: 'Long links', description: 'Links that cross a long way become port tags.' },
+  { value: 'long', label: 'Long Links', description: 'Links that cross a long way become port tags.' },
+  {
+    value: 'all',
+    label: 'All',
+    description: 'Every link becomes a pair of port tags. Links still place the boxes.',
+  },
 ]
 
 export const DEFAULT_EDGE_DISPLAY: EdgeDisplay = {
