@@ -62,7 +62,7 @@ function useFontsReady(): boolean {
 }
 
 export function DiagramProvider({ children }: { children: ReactNode }) {
-  const { models, links, epoch } = useModels()
+  const { models, links, epoch, renamedFrom } = useModels()
   const { mode } = useEditorMode()
   const { options, display } = useViewOptions()
   const { focus, hidden, folded } = useScope()
@@ -230,9 +230,15 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     // A frozen layout was measured for the boxes before the edit, so boxes are measured afresh.
     const geometryOf = (node: DrawnNode) =>
       (!frozen && layout.geometry.get(node.id)) || computeGeometry(node, options, false, measure)
-    const placed = frozen ? placeNewNodes(drawn.nodes, layout.positions, geometryOf) : null
+    // A class renamed or moved since the layout keeps its box, found under the id it was laid out with.
+    const laidOut = (id: string) => {
+      const was = renamedFrom.get(id)
+      return layout.positions.get(id) ?? (was === undefined ? undefined : layout.positions.get(was))
+    }
+    const kept = frozen ? new Map(drawn.nodes.flatMap((n) => { const p = laidOut(n.id); return p ? [[n.id, p] as const] : [] })) : layout.positions
+    const placed = frozen ? placeNewNodes(drawn.nodes, kept, geometryOf) : null
     return drawn.nodes.flatMap((node) => {
-      const position = layout.positions.get(node.id) ?? placed?.get(node.id)
+      const position = kept.get(node.id) ?? placed?.get(node.id)
       const base = position && geometryOf(node)
       if (!position || !base) return []
       const geometry = collapsedIds.has(node.id) ? computeGeometry(node, options, true, measure) : base
@@ -247,7 +253,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
         },
       ]
     })
-  }, [drawn, layout, collapsedIds, options, measure, frozen])
+  }, [drawn, layout, collapsedIds, options, measure, frozen, renamedFrom])
 
   const laidOutPorted = layoutState?.ported
   const shapingEdgeIds = useMemo<ReadonlySet<string>>(() => {

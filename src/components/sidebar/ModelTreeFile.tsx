@@ -1,6 +1,7 @@
 import { ChevronRightIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { useConfirmClose } from '@/hooks/useConfirmClose'
 import { useEditorMode } from '@/hooks/useEditorMode'
 import { useModels } from '@/hooks/useModels'
 import { useScope } from '@/hooks/useScope'
@@ -15,7 +16,8 @@ import { PackageVisibilityButton } from './PackageVisibilityButton'
 
 /** A loaded file, named by its package with the file's path beneath. Clicking it shows only that file. */
 export function ModelTreeFile({ file }: { file: TreeFile }) {
-  const { removeModel, dirtyKeys } = useModels()
+  const { dirtyKeys } = useModels()
+  const { requestClose, dialog } = useConfirmClose()
   const unsaved = useEditorMode().mode === 'edit' && dirtyKeys.has(file.model.key)
   const { isOpen, setOpen } = useTreeOpen()
   const { focus, hidden, focusOn } = useScope()
@@ -65,7 +67,7 @@ export function ModelTreeFile({ file }: { file: TreeFile }) {
           className="size-6 text-muted-foreground"
           aria-label={`Close ${model.fileName}`}
           title="Close file"
-          onClick={() => removeModel(model.key)}
+          onClick={() => requestClose(model.key)}
         >
           <XIcon />
         </Button>
@@ -77,6 +79,7 @@ export function ModelTreeFile({ file }: { file: TreeFile }) {
           packages.map((pkg) => <ModelTreePackage key={pkg.pkg.id} tree={pkg} model={model} />)
         )}
       </CollapsibleContent>
+      {dialog}
     </Collapsible>
   )
 }

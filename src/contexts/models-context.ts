@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { ParsedModel } from '@/types/ecore'
+import type { RefFile } from '@/lib/ecore/edit/refs'
 import type { WorkspaceFile } from '@/lib/workspace/workspace'
 
 export interface ModelSource {
@@ -18,6 +19,8 @@ export interface AddResult {
 export interface EditTransaction {
   /** The document of an open file, or null when no file has that key. */
   doc: (key: string) => XMLDocument | null
+  /** The open files as they were when the edit began. */
+  files: RefFile[]
 }
 
 export interface EditOptions {
@@ -54,6 +57,13 @@ export interface ModelsContextValue {
   /** What the next undo or redo would reverse, or null when there is nothing to do. */
   undoLabel: string | null
   redoLabel: string | null
+  /**
+   * Diagram ids changed by edits since the last load, as current id → the id it had when the files were
+   * loaded. Renaming or moving a class changes its id; this lets a frozen layout keep its box in place.
+   */
+  renamedFrom: ReadonlyMap<string, string>
+  /** The ids the latest edit changed, as new id → previous id. */
+  lastRenames: ReadonlyMap<string, string>
   /** Records the files as saved, clearing their unsaved mark. */
   markSaved: (keys: string[]) => void
 }

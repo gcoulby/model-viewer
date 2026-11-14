@@ -6,6 +6,7 @@ import {
   type EditTransaction,
   type ModelSource,
 } from '@/contexts/models-context'
+import { classifierIds, graphIdOf } from '@/lib/ecore/edit/refs'
 import { parseModel } from '@/lib/ecore/parse'
 import { newModelText } from '@/lib/workspace/newModel'
 import { loadWorkspace, saveWorkspace, type StoredWorkspace } from '@/lib/workspace/store'
@@ -22,6 +23,7 @@ import { parseXml, serializeXml } from '@/lib/workspace/xml'
 import type { ParsedModel } from '@/types/ecore'
 
 const PERSIST_DELAY_MS = 400
+const NO_RENAMES: ReadonlyMap<string, string> = new Map()
 
 // File objects are immutable and an edit only replaces the files it changes, so each file is parsed once
 // and the others keep their parsed models.
@@ -47,6 +49,11 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WorkspaceState>(EMPTY_WORKSPACE)
   const [links, setLinks] = useState<ReadonlyMap<string, string>>(new Map())
   const [hydrated, setHydrated] = useState(false)
+  const [renames, setRenames] = useState<{ epoch: number; from: Map<string, string>; last: Map<string, string> }>({
+    epoch: 0,
+    from: new Map(),
+    last: new Map(),
+  })
 
   const dispatch = useCallback((action: WorkspaceAction) => {
     const next = workspaceReducer(stateRef.current, action)
@@ -97,9 +104,13 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
 
   const edit = useCallback(
     (label: string, change: (tx: EditTransaction) => void, options?: EditOptions) => {
-      const files = new Map(stateRef.current.files.map((f) => [f.key, f]))
+      const current = stateRef.current
+      const files = new Map(current.files.map((f) => [f.key, f]))
       const docs = new Map<string, XMLDocument>()
+      // Each classifier's id before the edit, by element, so renames and moves can be followed.
+      const idsBefore = new Map<string, Map<Element, string>>()
       const tx: EditTransaction = {
+        files: current.files,
         doc: (key) => {
           const open = docs.get(key)
           if (open) return open
@@ -107,6 +118,7 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
           if (!file) return null
           const doc = parseXml(file.text)
           docs.set(key, doc)
+          idsBefore.set(key, classifierIds(doc, file.index))
           return doc
         },
       }
@@ -115,7 +127,25 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
         const file = files.get(key)
         return file ? [{ key, after: serializeXml(doc, file.text) }] : []
       })
-      return dispatch({ type: 'edit', label, changes, coalesce: options?.coalesce ?? null, time: Date.now() })
+      const changed = dispatch({ type: 'edit', label, changes, coalesce: options?.coalesce ?? null, time: Date.now() })
+      if (!changed) return false
+      const last = new Map<string, string>()
+      for (const [key, ids] of idsBefore) {
+        const doc = docs.get(key)
+        const index = files.get(key)?.index
+        if (!doc || index === undefined) continue
+        for (const [el, before] of ids) {
+          const after = doc.documentElement.contains(el) ? graphIdOf(index, el) : null
+          if (after && after !== before) last.set(after, before)
+        }
+      }
+      const epoch = current.epoch
+      setRenames((prev) => {
+        const from = new Map(prev.epoch === epoch ? prev.from : [])
+        for (const [after, before] of last) from.set(after, from.get(before) ?? before)
+        return { epoch, from, last }
+      })
+      return true
     },
     [dispatch],
   )
@@ -160,6 +190,8 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
     }
   }, [hydrated, state.files, links, snapshot])
 
+  const renamedFrom = renames.epoch === state.epoch ? renames.from : NO_RENAMES
+  const lastRenames = renames.epoch === state.epoch ? renames.last : NO_RENAMES
   const undoLabel = state.undo[state.undo.length - 1]?.label ?? null
   const redoLabel = state.redo[state.redo.length - 1]?.label ?? null
 
@@ -180,6 +212,8 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
       redo,
       undoLabel,
       redoLabel,
+      renamedFrom,
+      lastRenames,
       markSaved,
     }),
     [
@@ -198,6 +232,8 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
       redo,
       undoLabel,
       redoLabel,
+      renamedFrom,
+      lastRenames,
       markSaved,
     ],
   )

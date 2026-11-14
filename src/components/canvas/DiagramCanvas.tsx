@@ -9,6 +9,7 @@ import {
 } from '@xyflow/react'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useLoadFiles } from '@/hooks/useLoadFiles'
+import { useModels } from '@/hooks/useModels'
 import { usePorts } from '@/hooks/usePorts'
 import { useScope } from '@/hooks/useScope'
 import { useSelection } from '@/hooks/useSelection'
@@ -45,6 +46,7 @@ export function DiagramCanvas() {
   const { options, display } = useViewOptions()
   const { selectedId, centerRequest, select, clear } = useSelection()
   const { loadDropped } = useLoadFiles()
+  const { lastRenames } = useModels()
   const { fitView, setCenter, getNode, getZoom } = useReactFlow<CanvasNode, DiagramEdge>()
   const [nodes, setNodes, onNodesChange] = useNodesState<DiagramNode>([])
   const [dropping, setDropping] = useState(false)
@@ -62,13 +64,15 @@ export function DiagramCanvas() {
     setNodes((prev) => {
       const positions = new Map(prev.map((n) => [n.id, n.position]))
       const selected = new Set(prev.filter((n) => n.selected).map((n) => n.id))
+      // A box renamed by the last edit keeps where it was dragged to.
+      const previous = (id: string) => positions.get(id) ?? positions.get(lastRenames.get(id) ?? '')
       return layoutNodesList.map((n) => ({
         ...n,
-        position: positions.get(n.id) ?? n.position,
+        position: previous(n.id) ?? n.position,
         selected: selected.has(n.id),
       }))
     })
-  }, [layout, layoutNodesList, setNodes, fitView])
+  }, [layout, layoutNodesList, setNodes, fitView, lastRenames])
 
   useEffect(() => {
     if (!centerRequest) return
@@ -245,6 +249,8 @@ export function DiagramCanvas() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
+        // Boxes come from the model: deleting is an edit, made through the tree, the panel or the Delete shortcut.
+        deleteKeyCode={null}
         onNodeClick={(event, node) => {
           // A modifier click is adding to the selection, which the detail panel cannot show.
           if (node.type !== 'fileGroup' && !event.metaKey && !event.ctrlKey && !event.shiftKey) select(node.id)
