@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { AppShell } from '@/components/shell/AppShell'
+import { EditorModeProvider } from '@/components/providers/EditorModeProvider'
 import { DiagramProvider } from '@/components/providers/DiagramProvider'
 import { FileColorsProvider } from '@/components/providers/FileColorsProvider'
 import { ModelsProvider } from '@/components/providers/ModelsProvider'
@@ -16,6 +17,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <TooltipProvider>
+        <EditorModeProvider>
         <FileColorsProvider>
         <ModelsProvider>
           <ViewOptionsProvider>
@@ -35,6 +37,7 @@ export default function App() {
           </ViewOptionsProvider>
         </ModelsProvider>
         </FileColorsProvider>
+        </EditorModeProvider>
       </TooltipProvider>
       <Toaster />
     </ThemeProvider>

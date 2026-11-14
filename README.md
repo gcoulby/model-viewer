@@ -1,14 +1,14 @@
-# Ecore viewer
+# Ecore Studio
 
-Open Eclipse EMF metamodels as clear, interactive class diagrams, right in your browser.
+View and edit Eclipse EMF metamodels as clear, interactive class diagrams, right in your browser.
 
-**[Open the viewer →](https://gcoulby.github.io/model-viewer/)**
+**[Open Ecore Studio →](https://gcoulby.github.io/model-viewer/)**
 
-![Ecore viewer showing a class diagram of a small library metamodel](public/og-image.png)
+![Ecore Studio showing a class diagram of a small library metamodel](public/og-image.png)
 
-Drop in one or more `.ecore` files and you get a UML-style class diagram: classes, interfaces, enums, data types, references and inheritance. References between files are joined up. There's nothing to install and no Eclipse needed. Files are read in the browser and never uploaded anywhere.
+Drop in one or more `.ecore` files and you get a UML-style class diagram: classes, interfaces, enums, data types, references and inheritance. References between files are joined up. There's nothing to install and no Eclipse needed. Files are read in the browser and never uploaded anywhere. Your open files are kept in the browser's own storage, so they're still there when you come back. Close a file to remove it.
 
-It's a viewer, not an editor. It doesn't change, validate or save your models.
+There are two modes, and **E** switches between them. **View** is for exploring a model. **Edit** is for changing it: the view settings make way for editing, the diagram stops re-arranging itself as you work (**Re-layout** tidies it up when you ask), and you get undo and redo. **Save** downloads the files you've changed, or a zip if there are several.
 
 ## What it does
 

@@ -6,10 +6,12 @@ import { TopBar } from '@/components/topbar/TopBar'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { SidebarResizeHandle } from '@/components/sidebar/SidebarResizeHandle'
 import { useResizableSize } from '@/hooks/useResizableSize'
+import { useEditorShortcuts } from '@/hooks/useEditorShortcuts'
 import { useEscapeToDeselect } from '@/hooks/useEscapeToDeselect'
 
 export function AppShell() {
   useEscapeToDeselect()
+  useEditorShortcuts()
   const { size: width, startResize } = useResizableSize('ecore-viewer:sidebar-width', 292, 220, 560, 'right')
   return (
     <SidebarProvider

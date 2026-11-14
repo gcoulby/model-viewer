@@ -3,14 +3,19 @@ import { OpenFilesButton } from '@/components/topbar/OpenFilesButton'
 import { OpenFolderButton } from '@/components/topbar/OpenFolderButton'
 import { PasteButton } from '@/components/topbar/PasteButton'
 import { SampleButton } from '@/components/topbar/SampleButton'
+import { Button } from '@/components/ui/button'
+import { useEditorMode } from '@/hooks/useEditorMode'
+import { useModels } from '@/hooks/useModels'
 import { cn } from '@/lib/utils'
 
 /** The welcome screen. A drop anywhere on the canvas loads, so `dropping` only lights up the target. */
 export function EmptyState({ dropping }: { dropping: boolean }) {
+  const { mode } = useEditorMode()
+  const { createModel } = useModels()
   return (
     <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center p-6">
       <div className="pointer-events-auto w-full max-w-[470px]">
-        <h2 className="mb-2 text-[22px] font-semibold tracking-[-.005em]">Ecore viewer</h2>
+        <h2 className="mb-2 text-[22px] font-semibold tracking-[-.005em]">Ecore Studio</h2>
         <p className="mb-4 text-muted-foreground">
           Classes, enums, references and inheritance are drawn as a diagram. Files are read in your browser
           and go nowhere else. Load several files, a whole folder or a zip, and cross-file references are
@@ -32,7 +37,8 @@ export function EmptyState({ dropping }: { dropping: boolean }) {
         </div>
         <p className="mb-2 text-[12.5px] text-muted-foreground">Or choose them yourself:</p>
         <div className="flex flex-wrap gap-2">
-          <OpenFilesButton />
+          {mode === 'edit' && <Button onClick={() => createModel()}>New model</Button>}
+          <OpenFilesButton variant={mode === 'edit' ? 'outline' : 'default'} />
           <OpenFolderButton />
           <PasteButton />
           <SampleButton label="Try a sample" />

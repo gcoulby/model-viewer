@@ -7,7 +7,7 @@ export function Brand() {
         <rect x="13" y="3" width="9" height="7" rx="1.5" fill="none" strokeWidth="1.6" opacity=".5" />
         <path d="M6.5 10v7.5H13" fill="none" strokeWidth="1.6" />
       </svg>
-      <h1 className="text-[15px] font-semibold tracking-[.01em]">Ecore viewer</h1>
+      <h1 className="text-[15px] font-semibold tracking-[.01em]">Ecore Studio</h1>
     </div>
   )
 }

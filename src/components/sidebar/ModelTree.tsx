@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useEditorMode } from '@/hooks/useEditorMode'
 import { useModels } from '@/hooks/useModels'
 import { filterTree } from '@/lib/ecore/treeModel'
 import { ModelTreeFile } from './ModelTreeFile'
@@ -9,7 +10,8 @@ import { TreeOpenProvider } from './TreeOpenProvider'
 export function ModelTree({ query }: { query: string }) {
   const { models } = useModels()
   const normalised = query.trim().toLowerCase()
-  const files = useMemo(() => filterTree(models, normalised), [models, normalised])
+  const editing = useEditorMode().mode === 'edit'
+  const files = useMemo(() => filterTree(models, normalised, editing), [models, normalised, editing])
 
   return (
     <TreeOpenProvider>

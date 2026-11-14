@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { edgeTypeFor, type DiagramEdge } from '@/components/canvas/edges/edgeTypes'
 import { nodeTypeFor, type DiagramNode } from '@/components/canvas/nodes/nodeTypes'
 import { DiagramContext, type DiagramLayout } from '@/contexts/diagram-context'
+import { useEditorMode } from '@/hooks/useEditorMode'
 import { useModels } from '@/hooks/useModels'
 import { usePorts } from '@/hooks/usePorts'
 import { useScope } from '@/hooks/useScope'
@@ -16,10 +17,11 @@ import { portedBeforeLayout, portPredicate } from '@/lib/ecore/ports'
 import { deflatePositions, inflateGeometry, portMargins, type PortRoom } from '@/lib/ecore/portRoom'
 import { portTagTexts } from '@/lib/ecore/portTag'
 import { computeGeometry, createTextMeasurer, waitForFonts } from '@/lib/ecore/measure'
+import { placeNewNodes } from '@/lib/ecore/placeNew'
 import { runLayout } from '@/lib/ecore/runLayout'
 import { layoutEdges } from '@/lib/ecore/shaping'
 import { computeParallel, computeVisible } from '@/lib/ecore/visibleGraph'
-import type { DrawnEdge } from '@/types/graph'
+import type { DrawnEdge, DrawnNode } from '@/types/graph'
 import type { NodeGeometry, PortMode, ViewOptions } from '@/types/view'
 
 /** A finished layout and the request it answers, so a newer request shows as pending. */
@@ -33,6 +35,9 @@ interface LayoutState {
   portsVersion: number
   /** The links left out of this layout because they were ported. */
   ported: ReadonlySet<string>
+  /** The workspace epoch and package scope it was laid out for; edits within them keep the layout. */
+  epoch: number
+  scope: unknown[]
 }
 
 interface CollapsedState {
@@ -57,7 +62,8 @@ function useFontsReady(): boolean {
 }
 
 export function DiagramProvider({ children }: { children: ReactNode }) {
-  const { models, links } = useModels()
+  const { models, links, epoch } = useModels()
+  const { mode } = useEditorMode()
   const { options, display } = useViewOptions()
   const { focus, hidden, folded } = useScope()
   const ports = usePorts()
@@ -77,6 +83,24 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     [graph, options, focus, hidden, folded],
   )
   const drawn = useMemo(() => (visible ? foldPackages(visible, folded) : null), [visible, folded])
+  const scope = useMemo(() => [focus, hidden, folded], [focus, hidden, folded])
+
+  // In edit mode, a change that only comes from editing keeps the boxes where they are: the layout is
+  // frozen, new boxes are placed beside their package, and Re-layout tidies up when asked.
+  const sameRequest = (state: LayoutState) =>
+    state.options === options &&
+    state.portLayout === portLayout &&
+    state.portRoom === portRoom &&
+    state.relayoutCount === relayoutCount
+  const frozen =
+    mode === 'edit' &&
+    !!layoutState &&
+    layoutState.drawn !== drawn &&
+    layoutState.epoch === epoch &&
+    layoutState.scope.every((part, i) => part === scope[i]) &&
+    sameRequest(layoutState)
+  const upToDate = (state: LayoutState | null) => !!state && (frozen || (state.drawn === drawn && sameRequest(state)))
+  const layoutCurrent = useEffectEvent(() => upToDate(layoutState))
 
   // Ported links take no part in the layout, so the parts they join are placed apart. Links ported by hand
   // are read as a layout starts, but porting one does not start a layout; it marks the layout stale instead.
@@ -95,7 +119,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
   // Layout reruns whenever the graph, a view option, the collapsed packages or a re-layout request changes.
   // Layouts can run in a worker, so a result that arrives after a newer request is dropped.
   useEffect(() => {
-    if (!drawn || !fontsReady) return
+    if (!drawn || !fontsReady || layoutCurrent()) return
     let active = true
     const { ported, overrides, portsVersion } = portedForLayout(drawn)
     const geometry = new Map<string, NodeGeometry>()
@@ -171,23 +195,19 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
         relayoutCount,
         portsVersion,
         ported,
+        epoch,
+        scope,
       })
     })
     return () => {
       active = false
     }
-  }, [drawn, options, portLayout, portRoom, fontsReady, measure, relayoutCount])
+    // `mode` reruns this on leaving edit mode, so view mode lays out what was edited.
+  }, [drawn, options, portLayout, portRoom, fontsReady, measure, relayoutCount, mode, epoch, scope])
 
   // The last layout stays on screen while a newer one is worked out; with nothing visible there is none.
   const layout = drawn && fontsReady ? (layoutState?.layout ?? null) : null
-  const layoutPending =
-    !!drawn &&
-    (!layoutState ||
-      layoutState.drawn !== drawn ||
-      layoutState.options !== options ||
-      layoutState.portLayout !== portLayout ||
-      layoutState.portRoom !== portRoom ||
-      layoutState.relayoutCount !== relayoutCount)
+  const layoutPending = !!drawn && !upToDate(layoutState)
   const layoutStale = !!layoutState && layoutState.portsVersion !== ports.version
 
   const collapsedIds = collapsedState.layout === layout ? collapsedState.ids : NO_COLLAPSED
@@ -207,9 +227,13 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
 
   const nodes = useMemo<DiagramNode[]>(() => {
     if (!drawn || !layout) return []
+    // A frozen layout was measured for the boxes before the edit, so boxes are measured afresh.
+    const geometryOf = (node: DrawnNode) =>
+      (!frozen && layout.geometry.get(node.id)) || computeGeometry(node, options, false, measure)
+    const placed = frozen ? placeNewNodes(drawn.nodes, layout.positions, geometryOf) : null
     return drawn.nodes.flatMap((node) => {
-      const position = layout.positions.get(node.id)
-      const base = layout.geometry.get(node.id)
+      const position = layout.positions.get(node.id) ?? placed?.get(node.id)
+      const base = position && geometryOf(node)
       if (!position || !base) return []
       const geometry = collapsedIds.has(node.id) ? computeGeometry(node, options, true, measure) : base
       return [
@@ -223,7 +247,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
         },
       ]
     })
-  }, [drawn, layout, collapsedIds, options, measure])
+  }, [drawn, layout, collapsedIds, options, measure, frozen])
 
   const laidOutPorted = layoutState?.ported
   const shapingEdgeIds = useMemo<ReadonlySet<string>>(() => {

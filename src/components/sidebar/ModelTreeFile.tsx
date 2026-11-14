@@ -1,6 +1,7 @@
 import { ChevronRightIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { useEditorMode } from '@/hooks/useEditorMode'
 import { useModels } from '@/hooks/useModels'
 import { useScope } from '@/hooks/useScope'
 import { useTreeOpen } from '@/hooks/useTreeOpen'
@@ -14,7 +15,8 @@ import { PackageVisibilityButton } from './PackageVisibilityButton'
 
 /** A loaded file, named by its package with the file's path beneath. Clicking it shows only that file. */
 export function ModelTreeFile({ file }: { file: TreeFile }) {
-  const { removeModel } = useModels()
+  const { removeModel, dirtyKeys } = useModels()
+  const unsaved = useEditorMode().mode === 'edit' && dirtyKeys.has(file.model.key)
   const { isOpen, setOpen } = useTreeOpen()
   const { focus, hidden, focusOn } = useScope()
   const { model, packages } = file
@@ -41,7 +43,14 @@ export function ModelTreeFile({ file }: { file: TreeFile }) {
           className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1 text-left font-medium hover:bg-muted"
         >
           <span className="min-w-0 flex-1">
-            <span className="block truncate">{title}</span>
+            <span className="flex items-center gap-1.5">
+              <span className="truncate">{title}</span>
+              {unsaved && (
+                <span title="Unsaved changes" className="size-1.5 flex-none rounded-full bg-primary">
+                  <span className="sr-only">(unsaved changes)</span>
+                </span>
+              )}
+            </span>
             <span className="block truncate font-mono text-[11px] font-normal text-muted-foreground">
               {model.fileName}
             </span>
