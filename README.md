@@ -4,7 +4,7 @@ View and edit Eclipse EMF metamodels as clear, interactive class diagrams, right
 
 **[Open Ecore Studio →](https://gcoulby.github.io/model-viewer/)**
 
-![Ecore Studio showing a class diagram of a small library metamodel](public/og-image.png)
+![Ecore Studio editing a library metamodel, with the Loan class selected and its properties open](public/og-image.png)
 
 Drop in one or more `.ecore` files and you get a UML-style class diagram: classes, interfaces, enums, data types, references and inheritance. References between files are joined up. There's nothing to install and no Eclipse needed. Files are read in the browser and never uploaded anywhere. Your open files are kept in the browser's own storage, so they're still there when you come back. Close a file to remove it.
 
