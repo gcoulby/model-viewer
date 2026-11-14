@@ -14,6 +14,10 @@ interface ParsedFeatureBase {
   transient: boolean
   volatile: boolean
   readOnly: boolean
+  unsettable: boolean
+  /** EMF's default is true; only many-valued features show it when false. */
+  unique: boolean
+  ordered: boolean
   defaultValue: string | null
 }
 

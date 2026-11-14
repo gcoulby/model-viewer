@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { AppShell } from '@/components/shell/AppShell'
+import { ProblemsProvider } from '@/components/providers/ProblemsProvider'
 import { EditTargetProvider } from '@/components/providers/EditTargetProvider'
 import { EditorModeProvider } from '@/components/providers/EditorModeProvider'
 import { DiagramProvider } from '@/components/providers/DiagramProvider'
@@ -27,11 +28,13 @@ export default function App() {
               <PortsProvider>
               <DiagramProvider>
               <EditTargetProvider>
+              <ProblemsProvider>
                 <PasteDialogProvider>
                   <ReactFlowProvider>
                     <AppShell />
                   </ReactFlowProvider>
                 </PasteDialogProvider>
+              </ProblemsProvider>
               </EditTargetProvider>
               </DiagramProvider>
               </PortsProvider>

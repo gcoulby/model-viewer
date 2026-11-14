@@ -209,8 +209,16 @@ export function validate(files: RefFile[], docs: ReadonlyMap<string, Document>):
     for (const child of Array.from(el.children)) {
       const childKind = kindOf(child)
       if (!childKind || !NAMED.has(childKind) || !name(child)) continue
-      // Features and operations clash with their own kind; classifiers with each other.
-      const group = `${child.localName}|${name(child).toLowerCase()}`
+      // Features and operations clash with their own kind; classifiers with each other. Operations clash
+      // only on their whole signature, since overloads are legal.
+      const signature =
+        childKind === 'EOperation'
+          ? `(${Array.from(child.children)
+              .filter((c) => c.localName === 'eParameters')
+              .map((p) => typeToken(p) ?? '')
+              .join(',')})`
+          : ''
+      const group = `${child.localName}|${name(child).toLowerCase()}${signature}`
       const list = groups.get(group)
       if (list) list.push(child)
       else groups.set(group, [child])
@@ -218,8 +226,7 @@ export function validate(files: RefFile[], docs: ReadonlyMap<string, Document>):
     for (const clash of groups.values()) {
       if (clash.length < 2) continue
       const childKind = kindOf(clash[0]!)!
-      // Overloaded operations are legal in Ecore, so only warn.
-      const severity: Severity = childKind === 'EOperation' ? 'warning' : 'error'
+      const severity: Severity = 'error'
       const exact = new Set(clash.map(name)).size === 1
       for (const child of clash) {
         report(
@@ -228,7 +235,9 @@ export function validate(files: RefFile[], docs: ReadonlyMap<string, Document>):
           severity,
           'UniqueNames',
           exact
-            ? `Another ${KIND_LABEL[childKind].toLowerCase()} here is also called ${name(child)}`
+            ? childKind === 'EOperation'
+              ? `Another operation here has the same name and parameter types`
+              : `Another ${KIND_LABEL[childKind].toLowerCase()} here is also called ${name(child)}`
             : `${name(child)} differs from another name here only in case`,
         )
       }

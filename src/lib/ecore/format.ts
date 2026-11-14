@@ -1,4 +1,4 @@
-import type { Multiplicity } from '@/types/ecore'
+import type { Multiplicity, ParsedAttribute, ParsedReference } from '@/types/ecore'
 import type {
   DrawnNode,
   GraphNode,
@@ -16,21 +16,39 @@ export function multiplicitySuffix({ lower, upper }: Multiplicity): string {
   return lower === upper ? ` [${up}]` : ` [${lower}..${up}]`
 }
 
+/**
+ * A feature's behaviour flags that differ from EMF's defaults, as UML property modifiers. Derived is shown
+ * as a leading `/` instead, and unique and ordered only mean something for features holding many values.
+ */
+export function featureModifiers(feature: ParsedAttribute | ParsedReference): string[] {
+  const many = feature.multiplicity.upper < 0 || feature.multiplicity.upper > 1
+  const flags: string[] = []
+  if (feature.kind === 'attribute' && feature.isId) flags.push('id')
+  if (feature.readOnly) flags.push('readOnly')
+  if (feature.transient) flags.push('transient')
+  if (feature.volatile) flags.push('volatile')
+  if (feature.unsettable) flags.push('unsettable')
+  if (many && !feature.unique) flags.push('nonunique')
+  if (many && !feature.ordered) flags.push('unordered')
+  return flags
+}
+
+const braces = (flags: string[]) => (flags.length ? ` {${flags.join(', ')}}` : '')
+
 export function attributeRow({ feature, typeName }: ResolvedAttribute): string {
   let text = `${feature.derived ? '/' : ''}${feature.name}: ${typeName}${multiplicitySuffix(feature.multiplicity)}`
-  if (feature.isId) text += ' {id}'
   if (feature.defaultValue != null && feature.defaultValue !== '') text += ` = ${feature.defaultValue}`
-  return text
+  return text + braces(featureModifiers(feature))
+}
+
+/** A reference's name as its link is labelled: derived mark, name, multiplicity and modifiers. */
+export function referenceLabel(feature: ParsedReference): string {
+  return `${feature.derived ? '/' : ''}${feature.name}${multiplicitySuffix(feature.multiplicity)}${braces(featureModifiers(feature))}`
 }
 
 export function referenceRow({ feature, typeName, opposite }: ResolvedReference): string {
-  let text = `${feature.name}: ${typeName}${multiplicitySuffix(feature.multiplicity)}`
-  const flags: string[] = []
-  if (feature.containment) flags.push('containment')
-  if (feature.derived) flags.push('derived')
-  if (feature.transient) flags.push('transient')
-  if (feature.readOnly) flags.push('readonly')
-  if (flags.length) text += ` {${flags.join(', ')}}`
+  let text = `${feature.derived ? '/' : ''}${feature.name}: ${typeName}${multiplicitySuffix(feature.multiplicity)}`
+  text += braces([...(feature.containment ? ['containment'] : []), ...featureModifiers(feature)])
   if (opposite) text += `  opposite: ${opposite.name}`
   return text
 }

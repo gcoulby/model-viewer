@@ -4,12 +4,15 @@ import { useDiagram } from '@/hooks/useDiagram'
 import { useEditTarget } from '@/hooks/useEditTarget'
 import { useModelEdit } from '@/hooks/useModelEdit'
 import { useModels } from '@/hooks/useModels'
+import { useProblems } from '@/hooks/useProblems'
 import { useWorkspaceDocs } from '@/hooks/useWorkspaceDocs'
 import { KIND_LABEL, PROPERTIES, kindOf, newChildrenOf, type PropSpec } from '@/lib/ecore/edit/kinds'
 import { rowLabel } from '@/lib/ecore/edit/labels'
 import { graphIdOf } from '@/lib/ecore/edit/refs'
+import { refId } from '@/lib/ecore/edit/dom'
 import { modKey } from '@/lib/keys'
 import { KindBadge } from './KindBadge'
+import { ProblemIcon } from './ProblemIcon'
 import { PropertyField, type FieldContext } from './PropertyFields'
 
 function containerName(el: Element): string | null {
@@ -27,6 +30,7 @@ export function PropertiesPanel() {
   const docs = useWorkspaceDocs()
   const { graph } = useDiagram()
   const edit = useModelEdit()
+  const { byRef } = useProblems()
 
   if (!target || !element) return <EmptyProperties />
   const kind = kindOf(element)
@@ -71,6 +75,17 @@ export function PropertiesPanel() {
           <XIcon />
         </Button>
       </div>
+
+      {(byRef.get(refId(target)) ?? []).length > 0 && (
+        <ul aria-label="Problems" className="mt-3 grid gap-1 rounded-lg border p-2">
+          {byRef.get(refId(target))!.map((problem, i) => (
+            <li key={i} className="flex items-start gap-2 text-[12.5px] leading-snug">
+              <ProblemIcon severity={problem.severity} className="mt-0.5" />
+              {problem.message}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {PROPERTIES[kind].map((section) => {
         const bools = section.props.filter((p): p is Extract<PropSpec, { type: 'bool' }> => p.type === 'bool')

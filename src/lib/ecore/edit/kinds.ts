@@ -218,7 +218,7 @@ export type TypeFilter = 'any' | 'class' | 'datatype'
 
 export type PropSpec =
   | { type: 'text'; attr: string; label: string; placeholder?: string; mono?: boolean; multiline?: boolean }
-  | { type: 'bool'; attr: string; label: string; def: boolean; hint?: string }
+  | { type: 'bool'; attr: string; label: string; def: boolean; hint?: string; manyOnly?: boolean }
   | { type: 'int'; attr: string; label: string; def: number }
   | { type: 'multiplicity' }
   | { type: 'type'; label: string; filter: TypeFilter; optional: boolean }
@@ -240,8 +240,8 @@ const typed = (filter: TypeFilter, optional: boolean): PropSection => ({
   props: [{ type: 'type', label: 'Type', filter, optional }, { type: 'multiplicity' }],
 })
 const ordering: PropSpec[] = [
-  { type: 'bool', attr: 'ordered', label: 'Ordered', def: true },
-  { type: 'bool', attr: 'unique', label: 'Unique', def: true },
+  { type: 'bool', attr: 'ordered', label: 'Ordered', def: true, manyOnly: true },
+  { type: 'bool', attr: 'unique', label: 'Unique', def: true, manyOnly: true },
 ]
 const featureFlags: PropSpec[] = [
   { type: 'bool', attr: 'changeable', label: 'Changeable', def: true },
@@ -330,7 +330,7 @@ export const PROPERTIES: Record<EKind, PropSection[]> = {
     typed('class', false),
     {
       title: 'Behaviour',
-      props: [...featureFlags, { type: 'bool', attr: 'resolveProxies', label: 'Resolve proxies', def: true }, defaultValue],
+      props: [...featureFlags, { type: 'bool', attr: 'resolveProxies', label: 'Resolve proxies', def: true, hint: 'Whether references into other files load on demand. It changes how models load, so the diagram does not show it.' }, defaultValue],
     },
   ],
   EOperation: [

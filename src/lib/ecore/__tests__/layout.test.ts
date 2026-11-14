@@ -73,10 +73,18 @@ describe('format', () => {
       'copies: EInt [1] = 1',
     ])
     const loan = find('Loan') as ClassGraphNode
-    expect(attributeRow(loan.attributes[2]!)).toBe('/overdue: EBoolean')
+    expect(attributeRow(loan.attributes[2]!)).toBe('/overdue: EBoolean {readOnly, transient, volatile}')
     const library = find('Library') as ClassGraphNode
     expect(referenceRow(library.references[0]!)).toBe('items: Item [*] {containment}  opposite: library')
     expect(operationRow(library.operations[0]!)).toBe('findByTitle(title: EString): Item [*]')
+  })
+
+  it('shows unique and ordered only where they mean something', () => {
+    const base = { kind: 'attribute' as const, name: 'tags', path: '', typeRaw: '', derived: false, transient: false, volatile: false, readOnly: false, unsettable: true, defaultValue: null, isId: false }
+    const row = (upper: number) =>
+      attributeRow({ feature: { ...base, multiplicity: { lower: 0, upper }, unique: false, ordered: false }, typeName: 'EString', typeNodeId: null })
+    expect(row(-1)).toBe('tags: EString [*] {unsettable, nonunique, unordered}')
+    expect(row(1)).toBe('tags: EString {unsettable}')
   })
 
   it('caps long compartments', () => {

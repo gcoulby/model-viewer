@@ -96,8 +96,13 @@ function parsePackage(
     classifiers: [],
   }
   model.packages.push(pkg)
+  // Two classifiers with one name would share an id, so the later ones are told apart as `~2`, `~3`, ….
+  const seen = new Map<string, number>()
   for (const c of children(el, 'eClassifiers')) {
-    const classifier = parseClassifier(c, pkg, model)
+    const raw = c.getAttribute('name') ?? ''
+    const occurrence = (seen.get(raw) ?? 0) + 1
+    seen.set(raw, occurrence)
+    const classifier = parseClassifier(c, pkg, model, occurrence)
     if (classifier) {
       pkg.classifiers.push(classifier)
       model.classifiers.push(classifier)
@@ -114,11 +119,13 @@ function parseClassifier(
   el: Element,
   pkg: ParsedPackage,
   model: ParsedModel,
+  occurrence: number,
 ): ParsedClassifier | null {
   const type = xsiType(el) || 'EClass'
   const name = el.getAttribute('name') || UNNAMED
   const path = `${pkg.path}/${name}`
-  const base = { id: `${model.index}|${path}`, name, path, packageId: pkg.id }
+  const id = `${model.index}|${path}${occurrence > 1 ? `~${occurrence}` : ''}`
+  const base = { id, name, path, packageId: pkg.id }
 
   if (type === 'EClass') return parseClass(el, base)
   if (type === 'EEnum') {
@@ -165,6 +172,9 @@ function parseClass(
       transient: boolAttr(f, 'transient'),
       volatile: boolAttr(f, 'volatile'),
       readOnly: f.getAttribute('changeable') === 'false',
+      unsettable: boolAttr(f, 'unsettable'),
+      unique: f.getAttribute('unique') !== 'false',
+      ordered: f.getAttribute('ordered') !== 'false',
       defaultValue: f.getAttribute('defaultValueLiteral'),
     }
     if (featureType === 'EReference') {

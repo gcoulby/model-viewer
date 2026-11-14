@@ -1,5 +1,5 @@
 import type { DependencyEdge, DrawnEdge, FeatureGraphEdge } from '@/types/graph'
-import { multiplicitySuffix } from './format'
+import { multiplicitySuffix, referenceLabel } from './format'
 import { placeLabel, type EdgePath, type LabelPlacement } from './edgeGeometry'
 
 export type MarkerKind = 'triangle' | 'diamond' | 'arrow' | 'arrowMuted' | 'arrowCycle'
@@ -85,13 +85,15 @@ export function edgeLabels(edge: DrawnEdge, path: EdgePath): EdgeLabel[] {
   }
   const featureEdge: FeatureGraphEdge = edge
   labels.push({
-    text: name + multiplicitySuffix(featureEdge.forward.feature.multiplicity),
+    text: featureEdge.forward.feature.kind === 'reference'
+      ? referenceLabel(featureEdge.forward.feature)
+      : name + multiplicitySuffix(featureEdge.forward.feature.multiplicity),
     fontSize: 11,
     placement: placeLabel(path.end, { x: -path.endDirection.x, y: -path.endDirection.y }, 8, path.endLabel),
   })
   if (featureEdge.back) {
     labels.push({
-      text: featureEdge.back.feature.name + multiplicitySuffix(featureEdge.back.feature.multiplicity),
+      text: referenceLabel(featureEdge.back.feature),
       fontSize: 11,
       placement: placeLabel(path.start, path.startDirection, edge.kind === 'containment' ? 26 : 10, path.startLabel),
     })

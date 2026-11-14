@@ -78,3 +78,14 @@ export function rowLabel(el: Element): { name: string; detail: string } {
       return { name: el.localName, detail: '' }
   }
 }
+
+/** Where an element is, as the names on the way down to it below its root package: `Member › tier`. */
+export function elementTrail(el: Element): string {
+  const names: string[] = []
+  for (let current: Element | null = el; current?.parentElement; current = current.parentElement) {
+    if (!kindOf(current)) continue
+    const { name } = rowLabel(current)
+    names.unshift(name || '(unnamed)')
+  }
+  return names.join(' › ') || rowLabel(el).name
+}

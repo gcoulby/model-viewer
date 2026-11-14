@@ -6,6 +6,7 @@ import { useSaveFiles } from '@/hooks/useSaveFiles'
 import { modKey } from '@/lib/keys'
 import { FileMenu } from './FileMenu'
 import { IconAction } from './IconAction'
+import { ProblemsButton } from './ProblemsButton'
 
 export function EditActions() {
   const { undo, redo, undoLabel, redoLabel } = useModels()
@@ -31,6 +32,7 @@ export function EditActions() {
       >
         <Redo2Icon />
       </IconAction>
+      <ProblemsButton />
       <Separator orientation="vertical" className="mx-1 hidden h-5 md:block" />
       <Button
         variant={unsaved ? 'default' : 'outline'}

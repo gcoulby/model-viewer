@@ -75,7 +75,14 @@ export const fragmentOf = (el: Element) => segmentPath(el, false)
 export function graphIdOf(index: number, el: Element): string | null {
   if (!isClassifierKind(kindOf(el))) return null
   const path = segmentPath(el, true)
-  return path === null ? null : `${index}|${path}`
+  if (path === null) return null
+  // As the parser does, a classifier sharing its name with earlier siblings is numbered from `~2`.
+  const name = el.getAttribute('name') ?? ''
+  let occurrence = 1
+  for (let s = el.previousElementSibling; s; s = s.previousElementSibling) {
+    if (s.localName === 'eClassifiers' && (s.getAttribute('name') ?? '') === name) occurrence++
+  }
+  return `${index}|${path}${occurrence > 1 ? `~${occurrence}` : ''}`
 }
 
 /** The nearest classifier at or above `el`, which is what the diagram selects for it. */
@@ -105,11 +112,15 @@ export function classifierIds(doc: Document, index: number): Map<Element, string
   return ids
 }
 
-/** The element a diagram path (`//Library` or `//Library/books`) names. */
+/** The element a diagram path (`//Library`, `//Library~2` or `//Library/books`) names. */
 export function elementForPath(doc: Document, path: string): Element | null {
+  const numbered = path.match(/^(.*)~(\d+)$/)
+  const plain = numbered ? numbered[1]! : path
+  let skip = numbered ? Number(numbered[2]) - 1 : 0
   let found: Element | null = null
   walk(doc, (el) => {
-    if (!found && segmentPath(el, true) === path) found = el
+    if (found || segmentPath(el, true) !== plain) return
+    if (skip-- === 0) found = el
   })
   return found
 }

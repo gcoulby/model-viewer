@@ -9,6 +9,7 @@ import { useDiagram } from '@/hooks/useDiagram'
 import { useEditTarget } from '@/hooks/useEditTarget'
 import { useModelEdit } from '@/hooks/useModelEdit'
 import { useModels } from '@/hooks/useModels'
+import { useProblems } from '@/hooks/useProblems'
 import { useWorkspaceDocs } from '@/hooks/useWorkspaceDocs'
 import { elementAt, pathOf, refId, sameRef, type ElementRef } from '@/lib/ecore/edit/dom'
 import { canContain, kindOf, newChildrenOf } from '@/lib/ecore/edit/kinds'
@@ -19,6 +20,7 @@ import type { WorkspaceFile } from '@/lib/workspace/workspace'
 import { cn } from '@/lib/utils'
 import { ElementMenuItems, NewChildItems } from './ElementMenu'
 import { KindBadge } from './KindBadge'
+import { ProblemIcon } from './ProblemIcon'
 
 const INDENT = 14
 
@@ -222,6 +224,11 @@ function TreeRow({ el, depth, ctx, openKey: key, open, hasChildren }: TreeRowPro
   const { name, detail } = rowLabel(el)
   const node = graph?.nodes.get(graphIdOf(ctx.index, el) ?? '')
   const specs = newChildrenOf(el)
+  const { byRef, within } = useProblems()
+  const own = byRef.get(refId(ref))
+  const worst = own && (own.some((p) => p.severity === 'error') ? 'error' : 'warning')
+  // A closed row says when something inside it has a problem, so problems are never hidden.
+  const inside = !own && !open && within.has(refId(ref))
 
   useEffect(() => {
     if (!selected || !row.current) return
@@ -337,6 +344,12 @@ function TreeRow({ el, depth, ctx, openKey: key, open, hasChildren }: TreeRowPro
         </span>
         {detail && <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-muted-foreground">{detail}</span>}
         {!detail && <span className="flex-1" />}
+        {worst && (
+          <span title={own!.map((p) => p.message).join('\n')} className="flex-none">
+            <ProblemIcon severity={worst} />
+          </span>
+        )}
+        {inside && <span title="Something inside has a problem" className="mx-1 size-1.5 flex-none rounded-full bg-destructive/70" />}
         {specs.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger

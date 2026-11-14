@@ -18,6 +18,8 @@ Edit mode works like Eclipse's Ecore editor, laid out like the rest of the app:
 - **The Properties panel edits whatever is selected**, in the tree or on the diagram. Click a box to edit the class, or a line to edit its reference. Types are picked from every open file and Ecore's own types. Setting a reference's opposite pairs both sides.
 - **Renames and moves carry references with them**, across every open file. Deleting a class takes it out of supertype lists and opposites.
 - **The diagram stays put while you work.** New boxes appear beside their package and **Re-layout** tidies up when you ask. Back in view mode, the diagram is laid out afresh.
+- **Problems are checked as you go**, using the rules of Eclipse's Ecore validator: missing or wrong types, references to things that no longer exist, invalid or clashing names, opposites that don't agree, supertype cycles, impossible bounds, missing namespaces. The Problems button in the top bar lists them, and clicking one takes you to it. Rows with a problem are marked in the tree, and the Properties panel shows what's wrong. Saving still works with problems, but tells you about them.
+- **Behaviour flags show on the diagram** as UML modifiers, such as `{readOnly, transient}`, alongside `/` for derived features and `{id}`. Only flags that differ from the default are shown.
 - **Undo and redo** every change (⌘Z / ⇧⌘Z). Other shortcuts: **Enter** renames, **Del** deletes, **Alt ↑/↓** moves, **⌘D** duplicates.
 - **Save** (⌘S) downloads the files you've changed, or a zip if there are several. Anything you didn't touch is written back exactly as it was, annotations and all.
 

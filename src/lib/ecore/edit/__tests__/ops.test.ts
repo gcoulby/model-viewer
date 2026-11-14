@@ -64,6 +64,16 @@ describe('fragments and ids', () => {
     expect(fragmentOf(w.el(w.find('library.ecore', '//Item/title')))).toBe('//Item/title')
   })
 
+  it('tells same-named classifiers apart, as the parser does', () => {
+    const text = sample('library')[0]!.text.replace('name="Magazine"', 'name="Book"')
+    const model = parseModel(text, 'library.ecore', 0)
+    const ids = model.classifiers.filter((c) => c.name === 'Book').map((c) => c.id)
+    expect(new Set(ids).size).toBe(2)
+    const w = workspace([{ name: 'library.ecore', text }])
+    const books = Array.from(w.d.doc('library.ecore')!.documentElement.children).filter((c) => c.getAttribute('name') === 'Book')
+    expect(books.map((b) => graphIdOf(0, b)).sort()).toEqual([...ids].sort())
+  })
+
   it('builds relative paths', () => {
     expect(relativePath('', 'core.ecore')).toBe('core.ecore')
     expect(relativePath('a/b', 'a/c/x.ecore')).toBe('../c/x.ecore')

@@ -90,11 +90,15 @@ function TextField({ ctx, spec, focus }: { ctx: FieldContext; spec: Extract<Prop
 function BoolField({ ctx, spec }: { ctx: FieldContext; spec: Extract<PropSpec, { type: 'bool' }> }) {
   const raw = ctx.el.getAttribute(spec.attr)
   const checked = raw === null ? spec.def : raw === 'true'
+  const upper = Number(ctx.el.getAttribute('upperBound') ?? 1)
+  // Unique and ordered only mean something for a feature holding more than one value.
+  const inert = !!spec.manyOnly && upper >= 0 && upper <= 1
   return (
     <LabelledCheckbox
       label={spec.label}
       checked={checked}
-      title={spec.hint}
+      disabled={inert}
+      title={inert ? 'Only matters when the upper bound is more than 1' : spec.hint}
       onChange={(next) => ctx.run(`${next ? 'set' : 'clear'} ${spec.label.toLowerCase()}`, (d) => setFlag(d, ctx.target, spec.attr, next, spec.def))}
     />
   )
