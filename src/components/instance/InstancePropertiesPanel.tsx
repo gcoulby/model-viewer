@@ -222,28 +222,49 @@ function ReferenceField({ ctx, feature }: { ctx: Ctx; feature: MetaFeature }) {
   const options = candidates.map((o, i) => ({ value: String(i), label: objectLabel(ctx.meta, o) }))
 
   const creatable = feature.readOnly ? [] : concreteFamily(ctx.meta, feature.typeId)
+  const make = (cls: (typeof creatable)[number]) => edit.createReferenced(ctx.target, feature, cls)
+  // With nothing to pick, the field offers to make the object instead of showing an empty, disabled list.
+  const wide = !options.length
+  const wideClass = 'min-w-0 flex-1 justify-start border-dashed font-normal text-muted-foreground hover:text-foreground'
+  const wideLabel = (name: string) => (
+    <>
+      <PlusIcon />
+      <span className="truncate">
+        New <span className="font-mono text-[12.5px]">{name}</span>
+        {current.length ? '' : ` — none in this file yet`}
+      </span>
+    </>
+  )
   const create =
     creatable.length === 1 ? (
       <Button
         variant="outline"
-        size="icon-sm"
-        className="flex-none"
+        size={wide ? 'sm' : 'icon-sm'}
+        className={wide ? wideClass : 'flex-none'}
         aria-label={`New ${creatable[0]!.name} for ${feature.name}`}
         title={`New ${creatable[0]!.name}, put where it fits in this file`}
-        onClick={() => edit.createReferenced(ctx.target, feature, creatable[0]!)}
+        onClick={() => make(creatable[0]!)}
       >
-        <PlusIcon />
+        {wide ? wideLabel(creatable[0]!.name) : <PlusIcon />}
       </Button>
     ) : creatable.length > 1 ? (
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="outline" size="icon-sm" className="flex-none" aria-label={`New object for ${feature.name}`} title="New object, put where it fits in this file" />}
+          render={
+            <Button
+              variant="outline"
+              size={wide ? 'sm' : 'icon-sm'}
+              className={wide ? wideClass : 'flex-none'}
+              aria-label={`New object for ${feature.name}`}
+              title="New object, put where it fits in this file"
+            />
+          }
         >
-          <PlusIcon />
+          {wide ? wideLabel(feature.typeName) : <PlusIcon />}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           {creatable.map((c) => (
-            <DropdownMenuItem key={c.id} onClick={() => edit.createReferenced(ctx.target, feature, c)}>
+            <DropdownMenuItem key={c.id} onClick={() => make(c)}>
               <ClassBadge meta={ctx.meta} cls={c} />
               New {c.name}
             </DropdownMenuItem>
@@ -253,27 +274,30 @@ function ReferenceField({ ctx, feature }: { ctx: Ctx; feature: MetaFeature }) {
     ) : null
 
   const picker = (placeholder: string, onPick: (el: Element) => void) => (
-    <div className="flex items-center gap-1.5">
-      <Select value={null} items={options} disabled={!options.length || feature.readOnly} onValueChange={(v) => typeof v === 'string' && candidates[Number(v)] && onPick(candidates[Number(v)]!)}>
-        <SelectTrigger size="sm" className="min-w-0 flex-1 font-mono text-[12.5px]" aria-label={`Choose ${feature.name}`}>
-          <SelectValue
-            placeholder={options.length ? placeholder : current.length ? `No other ${feature.typeName} to add` : `No ${feature.typeName} in this file yet`}
-          />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              <span className="font-mono">{o.label}</span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex min-w-0 items-center gap-1.5">
+      {(!wide || !create) && (
+        <Select value={null} items={options} disabled={!options.length || feature.readOnly} onValueChange={(v) => typeof v === 'string' && candidates[Number(v)] && onPick(candidates[Number(v)]!)}>
+          <SelectTrigger size="sm" className="min-w-0 flex-1 font-mono text-[12.5px]" aria-label={`Choose ${feature.name}`}>
+            <SelectValue
+              className="truncate"
+              placeholder={options.length ? placeholder : current.length ? `No other ${feature.typeName} to add` : `No ${feature.typeName} in this file yet`}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                <span className="font-mono">{o.label}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       {create}
     </div>
   )
 
   return (
-    <div className="grid gap-1">
+    <div className="grid min-w-0 gap-1">
       <FeatureLabel feature={feature} />
       {current.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
