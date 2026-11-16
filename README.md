@@ -8,7 +8,7 @@ View and edit Eclipse EMF metamodels as clear, interactive class diagrams, right
 
 Drop in one or more `.ecore` files and you get a UML-style class diagram: classes, interfaces, enums, data types, references and inheritance. References between files are joined up. There's nothing to install and no Eclipse needed. Files are read in the browser and never uploaded anywhere. Your open files are kept in the browser's own storage, so they're still there when you come back. Close a file to remove it.
 
-There are two modes, and **E** switches between them. **View** is for exploring a model. **Edit** is for changing it.
+There are three modes. **View** is for exploring a model. **Edit** (**E**) is for changing the metamodel. **Instance** (**I**) is for making instances of it.
 
 ## Editing
 
@@ -44,6 +44,17 @@ Edit mode works like Eclipse's Ecore editor, laid out like the rest of the app:
 - **Helps you find your way.** Search the model tree, click any type to centre it, and see its details: supertypes, subtypes, attributes, references, operations, inherited features, and where an enum or data type is used. Show only one file, or hide packages you don't need.
 - **Exports what you see.** Export the whole diagram as SVG or PNG, in the current theme.
 - **Light and dark themes.** It follows your system setting until you pick one.
+
+## Instances
+
+Instance mode is the counterpart to Eclipse's **Create Dynamic Instance** and reflective editor: it builds models from your metamodel's classes.
+
+- **New instance** starts a file from a class. The classes nothing else contains come first, since they're the usual roots. Opening an existing `.xmi` file finds its metamodel by namespace URI.
+- **The tree shows the objects.** Right-click one for **New child**, which offers only the classes its containment references accept, subclasses included. Duplicate, move, delete and drag work as they do in edit mode. The **+** on a file adds another root object to it, for objects nothing in the file contains; a file with several roots is saved inside `xmi:XMI`, as EMF writes it.
+- **The Properties panel shows every feature of the object's class.** Each attribute gets a field that fits its type: text, numbers, a checkbox, a list of enum literals or a date picker. References pick from objects of a fitting type, and the **+** beside one makes a new object for it, wherever it fits in the file. Containment references list what they hold. Derived features, and references to the object's container, are shown but not edited.
+- **The diagram shows the objects**, UML style, as `name : Class` with their values, linked by containment and references.
+- **Problems are checked as you go**: required values left empty, too many values, values that don't fit their type, references to missing or wrong-typed objects, duplicate IDs, and classes that aren't in the metamodel.
+- **Instances save as EMF XMI**, so Eclipse opens them. References between objects are written as paths such as `//@items.0` (`/0/@items.0` with several roots), and kept right when objects are moved or deleted. For now an instance lives in one file.
 
 ## Running it locally
 

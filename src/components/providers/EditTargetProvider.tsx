@@ -8,6 +8,9 @@ import { useSelection } from '@/hooks/useSelection'
 import { useWorkspaceDocs } from '@/hooks/useWorkspaceDocs'
 import { nearestAt, pathOf, refId, type ElementRef } from '@/lib/ecore/edit/dom'
 import { elementForPath, enclosingClassifier, graphIdOf } from '@/lib/ecore/edit/refs'
+import { elementForObjectPath, objectId } from '@/lib/instance/xmi'
+
+const REFOCUS_MS = 600
 
 /**
  * Keeps the element being edited and the diagram's selection in step, both ways. Targeting something in the
@@ -47,8 +50,13 @@ export function EditTargetProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // A request can be claimed again for a moment, by a field for the same element that has just been mounted
+  // afresh; after that, or by any other element's field, it cannot.
+  const takenAt = useRef(0)
   const takeFocus = useCallback((request: FocusRequest) => {
-    if (request.nonce <= taken.current) return false
+    const now = performance.now()
+    if (request.nonce < taken.current || (request.nonce === taken.current && now - takenAt.current > REFOCUS_MS)) return false
+    if (request.nonce > taken.current) takenAt.current = now
     taken.current = request.nonce
     return true
   }, [])
@@ -59,15 +67,17 @@ export function EditTargetProvider({ children }: { children: ReactNode }) {
   // Target → diagram.
   useEffect(() => {
     const selectedId = currentSelection()
-    if (mode !== 'edit') return
+    if (mode === 'view') return
     if (followedSelection.current) {
       followedSelection.current = false
       return
     }
     if (!resolved) return
     const index = files.find((f) => f.key === resolved.ref.key)?.index
-    const classifier = enclosingClassifier(resolved.el)
-    const id = classifier && index !== undefined ? graphIdOf(index, classifier) : null
+    // In Instance mode the target is an object, which is its own box; otherwise it is the class it is in.
+    const classifier = mode === 'instance' ? null : enclosingClassifier(resolved.el)
+    const id =
+      index === undefined ? null : mode === 'instance' ? objectId(index, resolved.el) : classifier ? graphIdOf(index, classifier) : null
     if (id === selectedId && !centerNext.current) return
     synced.current = id
     if (id) selectNode(id, { center: centerNext.current })
@@ -78,7 +88,7 @@ export function EditTargetProvider({ children }: { children: ReactNode }) {
   // Diagram → target. The selection has several sources (clicks, search, Escape), so it is followed here
   // rather than at each of them.
   useEffect(() => {
-    if (mode !== 'edit' || selectedId === synced.current) return
+    if (mode === 'view' || selectedId === synced.current) return
     synced.current = selectedId
     if (!selectedId) {
       setTargetState(null)
@@ -94,13 +104,15 @@ export function EditTargetProvider({ children }: { children: ReactNode }) {
         const bar = nodeId.indexOf('|')
         const file = files.find((f) => String(f.index) === nodeId.slice(0, bar))
         const doc = file && docs.get(file.key)
-        const el = doc && elementForPath(doc, path ?? nodeId.slice(bar + 1))
+        const rest = path ?? nodeId.slice(bar + 1)
+        const el = doc && (mode === 'instance' ? elementForObjectPath(doc, rest) : elementForPath(doc, rest))
         return file && el ? { key: file.key, path: pathOf(el) } : null
       }
       if (graph?.nodes.get(id)?.kind !== undefined && graph.nodes.get(id)?.kind !== 'external') return at(id)
       const edge = drawn?.edges.find((e) => e.id === id)
       if (!edge || edge.kind === 'dependency') return null
-      if (edge.kind === 'inherit') return at(edge.from)
+      // A link between objects targets the object it starts from.
+      if (edge.kind === 'inherit' || mode === 'instance') return at(edge.from)
       return at(edge.from, edge.forward.feature.path)
     }
   }, [selectedId, mode, files, docs, graph, drawn])

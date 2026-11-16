@@ -6,15 +6,21 @@ import { useSaveFiles } from '@/hooks/useSaveFiles'
 import { modKey } from '@/lib/keys'
 import { FileMenu } from './FileMenu'
 import { IconAction } from './IconAction'
+import { NewModelButton } from './NewModelButton'
 import { ProblemsButton } from './ProblemsButton'
+import { NewInstanceButton } from '@/components/instance/NewInstanceButton'
+import { useEditorMode } from '@/hooks/useEditorMode'
 
 export function EditActions() {
   const { undo, redo, undoLabel, redoLabel } = useModels()
   const { save, unsaved } = useSaveFiles()
+  const { mode } = useEditorMode()
 
   return (
     <>
       <FileMenu />
+      {mode === 'edit' && <NewModelButton />}
+      {mode === 'instance' && <NewInstanceButton />}
       <Separator orientation="vertical" className="mx-1 hidden h-5 md:block" />
       <IconAction
         label={undoLabel ? `Undo ${undoLabel}` : 'Undo'}

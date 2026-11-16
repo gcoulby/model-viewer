@@ -14,6 +14,8 @@ export function serializeXml(doc: XMLDocument, original: string): string {
   let text = new XMLSerializer().serializeToString(doc)
   const declaration = original.match(DECLARATION)?.[0].trim()
   if (declaration && !DECLARATION.test(text)) text = `${declaration}\n${text}`
+  // Some browsers keep the declaration but run the root element onto the same line.
+  text = text.replace(/^(\s*<\?xml[^?]*\?>)(?!\r?\n)/, '$1\n')
   if (original.endsWith('\n') && !text.endsWith('\n')) text += '\n'
   return text
 }

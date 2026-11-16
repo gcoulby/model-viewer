@@ -5,6 +5,8 @@ import { useModels } from '@/hooks/useModels'
 import { useWorkspaceDocs } from '@/hooks/useWorkspaceDocs'
 import { refId } from '@/lib/ecore/edit/dom'
 import { validate } from '@/lib/ecore/edit/validate'
+import { validateInstances } from '@/lib/instance/validateInstance'
+import { useInstances } from '@/hooks/useInstances'
 
 const NONE: ProblemsContextValue = { problems: [], byRef: new Map(), within: new Set(), errors: 0, warnings: 0 }
 
@@ -13,10 +15,17 @@ export function ProblemsProvider({ children }: { children: ReactNode }) {
   const { mode } = useEditorMode()
   const { files } = useModels()
   const docs = useWorkspaceDocs()
+  const { meta, instanceFiles, instanceKeys } = useInstances()
 
   const value = useMemo<ProblemsContextValue>(() => {
-    if (mode !== 'edit' || !files.length) return NONE
-    const problems = validate(files, docs).sort((a, b) => Number(a.severity === 'warning') - Number(b.severity === 'warning'))
+    if (mode === 'view' || !files.length) return NONE
+    const found =
+      mode === 'instance'
+        ? meta
+          ? validateInstances(meta, instanceFiles)
+          : []
+        : validate(files.filter((f) => !instanceKeys.has(f.key)), docs)
+    const problems = found.sort((a, b) => Number(a.severity === 'warning') - Number(b.severity === 'warning'))
     const byRef = new Map<string, typeof problems>()
     const within = new Set<string>()
     for (const problem of problems) {
@@ -28,7 +37,7 @@ export function ProblemsProvider({ children }: { children: ReactNode }) {
     }
     const errors = problems.filter((p) => p.severity === 'error').length
     return { problems, byRef, within, errors, warnings: problems.length - errors }
-  }, [mode, files, docs])
+  }, [mode, files, docs, meta, instanceFiles, instanceKeys])
 
   return <ProblemsContext.Provider value={value}>{children}</ProblemsContext.Provider>
 }

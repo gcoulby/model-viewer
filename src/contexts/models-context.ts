@@ -47,6 +47,8 @@ export interface ModelsContextValue {
   linkExternal: (uri: string, modelKey: string) => void
   /** Adds an empty model and returns its key. */
   createModel: () => string
+  /** Adds a new, unsaved file under the first free name like `base` and returns its key. */
+  createFile: (base: string, extension: string, text: string) => string
   /**
    * Runs `change` against the documents it asks for and records the result as one undoable step.
    * Returns false when nothing changed.

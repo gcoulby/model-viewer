@@ -6,7 +6,8 @@ export interface SourceFile {
   path: string
 }
 
-const FOLDER_EXTENSION = /\.ecore$/i
+// Metamodels and their instances; other XML in a project is left alone.
+const FOLDER_EXTENSION = /\.(ecore|xmi)$/i
 const SKIPPED_FOLDERS = new Set(['node_modules'])
 
 export function isSkipped(path: string): boolean {

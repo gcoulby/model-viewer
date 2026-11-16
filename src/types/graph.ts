@@ -49,8 +49,16 @@ interface GraphNodeBase {
   subIds: string[]
 }
 
+/** Set on a class node that stands for an object in an instance, drawn as `name : Class` with its values. */
+export interface ObjectInfo {
+  className: string
+  /** The object's set values, as `feature = value` rows. */
+  slots: string[]
+}
+
 export interface ClassGraphNode extends GraphNodeBase {
   kind: 'class'
+  object?: ObjectInfo
   package: PackageInfo
   abstract: boolean
   interface: boolean

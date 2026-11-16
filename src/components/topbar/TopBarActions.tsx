@@ -14,7 +14,7 @@ export function TopBarActions() {
   return (
     <div className="flex flex-none items-center gap-1.5">
       <SidebarTrigger variant="outline" className="md:hidden" />
-      {mode === 'edit' ? (
+      {mode !== 'view' ? (
         <EditActions />
       ) : (
         <>

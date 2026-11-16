@@ -18,8 +18,8 @@ export interface EditTargetContextValue {
   /** Bumped to ask the Properties panel to focus and select its first field, as after creating something. */
   focusRequest: FocusRequest | null
   /**
-   * Claims a focus request. True only the first time it is asked for a request, so a field mounted later,
-   * for another element, does not take focus from an old one.
+   * Claims a focus request. Fields check that the request is for their own element; a claimed request stays
+   * claimable only for a moment, so a field mounted later does not take focus from an old one.
    */
   takeFocus: (request: FocusRequest) => boolean
 }

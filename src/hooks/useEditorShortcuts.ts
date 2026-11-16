@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useEditTarget } from '@/hooks/useEditTarget'
 import { useEditorMode } from '@/hooks/useEditorMode'
+import { useInstanceEdit } from '@/hooks/useInstanceEdit'
 import { useModelEdit } from '@/hooks/useModelEdit'
 import { useModels } from '@/hooks/useModels'
 import { useSaveFiles } from '@/hooks/useSaveFiles'
@@ -17,11 +18,14 @@ const onControl = (target: EventTarget | null) =>
  * focus is, short of a field, button or menu.
  */
 export function useEditorShortcuts() {
-  const { mode, toggleMode } = useEditorMode()
+  const { mode, toggleMode, setMode } = useEditorMode()
   const { undo, redo } = useModels()
   const { save } = useSaveFiles()
   const { target, setTarget } = useEditTarget()
-  const edit = useModelEdit()
+  const modelEdit = useModelEdit()
+  const instanceEdit = useInstanceEdit()
+  // The same keys edit whichever is being edited: the metamodel, or an instance of it.
+  const edit = mode === 'instance' ? instanceEdit : modelEdit
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -32,7 +36,12 @@ export function useEditorShortcuts() {
         toggleMode()
         return
       }
-      if (mode !== 'edit') return
+      if (!mod && !event.altKey && key === 'i' && !typingInField(event.target)) {
+        event.preventDefault()
+        setMode(mode === 'instance' ? 'view' : 'instance')
+        return
+      }
+      if (mode === 'view') return
       if (target && !typingInField(event.target) && !onControl(event.target)) {
         const structural = target.path.length > 0
         if (!mod && !event.altKey && (event.key === 'Delete' || event.key === 'Backspace') && structural) {
@@ -71,5 +80,5 @@ export function useEditorShortcuts() {
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [mode, toggleMode, undo, redo, save, target, setTarget, edit])
+  }, [mode, toggleMode, setMode, undo, redo, save, target, setTarget, edit])
 }

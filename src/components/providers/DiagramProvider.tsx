@@ -10,6 +10,8 @@ import { useScope } from '@/hooks/useScope'
 import { useViewOptions } from '@/hooks/useViewOptions'
 import { loadElk } from '@/lib/elk'
 import { buildGraph } from '@/lib/ecore/buildGraph'
+import { buildObjectGraph } from '@/lib/instance/objectGraph'
+import { useInstances } from '@/hooks/useInstances'
 import type { Box } from '@/lib/ecore/edgeGeometry'
 import { edgeTitle } from '@/lib/ecore/edgeStyle'
 import { foldPackages, type DrawnGraph } from '@/lib/ecore/fold'
@@ -37,6 +39,8 @@ interface LayoutState {
   ported: ReadonlySet<string>
   /** The workspace epoch and package scope it was laid out for; edits within them keep the layout. */
   epoch: number
+  /** The mode it was laid out in: a different mode draws a different diagram. */
+  mode: string
   scope: unknown[]
 }
 
@@ -77,7 +81,12 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
   const [layoutState, setLayoutState] = useState<LayoutState | null>(null)
   const [collapsedState, setCollapsedState] = useState<CollapsedState>({ layout: null, ids: new Set() })
 
-  const graph = useMemo(() => (models.length ? buildGraph(models, links) : null), [models, links])
+  const { meta, instanceFiles } = useInstances()
+  // Instance mode draws the objects; the other modes draw the metamodels.
+  const graph = useMemo(() => {
+    if (mode === 'instance') return meta && instanceFiles.length ? buildObjectGraph(meta, instanceFiles) : null
+    return models.length ? buildGraph(models, links) : null
+  }, [mode, meta, instanceFiles, models, links])
   const visible = useMemo(
     () => (graph ? computeVisible(graph, options, { focus, hidden, folded }) : null),
     [graph, options, focus, hidden, folded],
@@ -93,8 +102,9 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
     state.portRoom === portRoom &&
     state.relayoutCount === relayoutCount
   const frozen =
-    mode === 'edit' &&
+    mode !== 'view' &&
     !!layoutState &&
+    layoutState.mode === mode &&
     layoutState.drawn !== drawn &&
     layoutState.epoch === epoch &&
     layoutState.scope.every((part, i) => part === scope[i]) &&
@@ -197,6 +207,7 @@ export function DiagramProvider({ children }: { children: ReactNode }) {
         ported,
         epoch,
         scope,
+        mode,
       })
     })
     return () => {

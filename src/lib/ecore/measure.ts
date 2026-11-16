@@ -74,6 +74,11 @@ function compartmentsOf(node: DrawnNode, options: ViewOptions): string[][] {
   const compartments: string[][] = []
   switch (node.kind) {
     case 'class':
+      // An object shows its values, whatever the class-diagram options say.
+      if (node.object) {
+        if (node.object.slots.length) compartments.push(capRows(node.object.slots))
+        break
+      }
       if (options.attributes && node.attributes.length) compartments.push(capRows(node.attributes.map(attributeRow)))
       if (options.referenceRows && node.references.length) compartments.push(capRows(node.references.map(referenceBoxRow)))
       if (options.operations && node.operations.length) compartments.push(capRows(node.operations.map(operationRow)))

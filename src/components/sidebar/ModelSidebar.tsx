@@ -5,6 +5,7 @@ import { useEditorMode } from '@/hooks/useEditorMode'
 import { useResizableSize } from '@/hooks/useResizableSize'
 import { useSelectNode } from '@/hooks/useSelectNode'
 import { EditTree } from '@/components/edit/EditTree'
+import { InstanceTree } from '@/components/instance/InstanceTree'
 import { LayoutPanel } from './LayoutPanel'
 import { Legend } from './Legend'
 import { ModelTree } from './ModelTree'
@@ -62,7 +63,13 @@ export function ModelSidebar() {
       </SidebarHeader>
       {mode === 'view' && <SettingsResizeHandle onPointerDown={startResize} />}
       <SidebarContent className="overflow-hidden">
-        {mode === 'edit' ? <EditTree query={query} /> : <ModelTree query={query} />}
+        {mode === 'edit' ? (
+          <EditTree query={query} />
+        ) : mode === 'instance' ? (
+          <InstanceTree query={query} />
+        ) : (
+          <ModelTree query={query} />
+        )}
       </SidebarContent>
       <SidebarFooter className="p-0">
         <Legend />

@@ -5,7 +5,8 @@ const STORAGE_KEY = 'ecore-viewer:mode'
 
 function storedMode(): EditorMode {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'edit' ? 'edit' : 'view'
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored === 'edit' || stored === 'instance' ? stored : 'view'
   } catch {
     return 'view'
   }

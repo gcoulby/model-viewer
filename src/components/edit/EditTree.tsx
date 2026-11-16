@@ -1,5 +1,5 @@
 import { ChevronRightIcon, DownloadIcon, FileIcon, PlusIcon, XIcon } from 'lucide-react'
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -10,6 +10,7 @@ import { useEditTarget } from '@/hooks/useEditTarget'
 import { useModelEdit } from '@/hooks/useModelEdit'
 import { useModels } from '@/hooks/useModels'
 import { useProblems } from '@/hooks/useProblems'
+import { useInstances } from '@/hooks/useInstances'
 import { useWorkspaceDocs } from '@/hooks/useWorkspaceDocs'
 import { elementAt, pathOf, refId, sameRef, type ElementRef } from '@/lib/ecore/edit/dom'
 import { canContain, kindOf, newChildrenOf } from '@/lib/ecore/edit/kinds'
@@ -17,6 +18,7 @@ import { rowLabel } from '@/lib/ecore/edit/labels'
 import { graphIdOf } from '@/lib/ecore/edit/refs'
 import { downloadFiles } from '@/lib/workspace/save'
 import type { WorkspaceFile } from '@/lib/workspace/workspace'
+import { restoreFocusUnlessTyping } from '@/lib/keys'
 import { cn } from '@/lib/utils'
 import { ElementMenuItems, NewChildItems } from './ElementMenu'
 import { KindBadge } from './KindBadge'
@@ -82,7 +84,10 @@ interface TreeContext {
 
 /** The containment tree of every open file, for editing: everything Ecore holds, down to generic types. */
 export function EditTree({ query }: { query: string }) {
-  const { files } = useModels()
+  const { files: allFiles } = useModels()
+  const { instanceKeys } = useInstances()
+  // Instances are edited in Instance mode; this tree holds the metamodels.
+  const files = useMemo(() => allFiles.filter((f) => !instanceKeys.has(f.key)), [allFiles, instanceKeys])
   const docs = useWorkspaceDocs()
   const { target, element } = useEditTarget()
   const [open, setOpenState] = useState<ReadonlyMap<string, boolean>>(new Map())
@@ -154,7 +159,7 @@ export function EditTree({ query }: { query: string }) {
   )
 }
 
-function FileHeader({ file, onClose }: { file: WorkspaceFile; onClose: () => void }) {
+export function FileHeader({ file, onClose, actions }: { file: WorkspaceFile; onClose: () => void; actions?: ReactNode }) {
   const { dirtyKeys, markSaved } = useModels()
   const unsaved = dirtyKeys.has(file.key)
   return (
@@ -180,6 +185,7 @@ function FileHeader({ file, onClose }: { file: WorkspaceFile; onClose: () => voi
       >
         <DownloadIcon />
       </Button>
+      {actions}
       <Button variant="ghost" size="icon-xs" className="size-6" aria-label={`Close ${file.name}`} title="Close file" onClick={onClose}>
         <XIcon />
       </Button>
@@ -366,13 +372,13 @@ function TreeRow({ el, depth, ctx, openKey: key, open, hasChildren }: TreeRowPro
             >
               <PlusIcon />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-44" finalFocus={restoreFocusUnlessTyping}>
               <NewChildItems specs={specs} onPick={(spec) => edit.create(ref, spec)} />
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       </ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent finalFocus={restoreFocusUnlessTyping}>
         <ElementMenuItems el={el} target={ref} />
       </ContextMenuContent>
     </ContextMenu>

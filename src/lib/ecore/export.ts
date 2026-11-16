@@ -150,6 +150,7 @@ function nodeSvg(
   const paint = paintForNode(node, dark, hueFor)
   const dash = node.kind === 'external' ? ' stroke-dasharray="5 4"' : ''
   const italic = node.kind === 'class' && node.abstract ? ' font-style="italic"' : ''
+  const underline = node.kind === 'class' && node.object ? ' text-decoration="underline"' : ''
   const parts: string[] = [
     // A collapsed package gets a second card behind it, as on screen.
     node.kind === 'package'
@@ -164,7 +165,7 @@ function nodeSvg(
     )
   }
   parts.push(
-    `<text x="${w / 2}" y="${stereotype ? 33 : 20}" text-anchor="middle" font-size="13" font-weight="600"${italic} font-family="${FONT_UI}" fill="${c.ink}">${escapeXml(node.name)}</text>`,
+    `<text x="${w / 2}" y="${stereotype ? 33 : 20}" text-anchor="middle" font-size="13" font-weight="600"${italic}${underline} font-family="${FONT_UI}" fill="${c.ink}">${escapeXml(node.name)}</text>`,
   )
   let top = hh
   for (const rows of compartments) {

@@ -1,4 +1,4 @@
-import { EyeIcon, PencilIcon } from 'lucide-react'
+import { BoxesIcon, EyeIcon, PencilIcon } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { EditorMode } from '@/contexts/editor-mode-context'
 import { useEditorMode } from '@/hooks/useEditorMode'
@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils'
 
 const MODES: { value: EditorMode; label: string; icon: typeof EyeIcon; title: string }[] = [
   { value: 'view', label: 'View', icon: EyeIcon, title: 'Explore the diagram (E)' },
-  { value: 'edit', label: 'Edit', icon: PencilIcon, title: 'Change the model (E)' },
+  { value: 'edit', label: 'Edit', icon: PencilIcon, title: 'Change the metamodel (E)' },
+  { value: 'instance', label: 'Instance', icon: BoxesIcon, title: 'Make and edit instances of the metamodel (I)' },
 ]
 
 export function ModeSwitch() {
@@ -32,7 +33,7 @@ export function ModeSwitch() {
           className={cn(
             'gap-1.5 px-2.5 text-xs text-muted-foreground aria-pressed:text-foreground',
             // Editing is the mode that changes files, so it is marked more strongly than viewing.
-            value === 'edit' && 'aria-pressed:bg-tint aria-pressed:text-primary',
+            value !== 'view' && 'aria-pressed:bg-tint aria-pressed:text-primary',
           )}
         >
           <Icon className="size-3.5" />

@@ -27,6 +27,7 @@ import {
 import { fragmentOf, refItems, refTo, refTokens, resolveToken, splitToken, type RefFile } from '@/lib/ecore/edit/refs'
 import type { EditOptions } from '@/contexts/models-context'
 import { useEditTarget } from '@/hooks/useEditTarget'
+import { focusField } from '@/lib/keys'
 import { candidateOptions } from './pickerOptions'
 import { TypePicker, type PickerOption } from './TypePicker'
 
@@ -59,8 +60,7 @@ function TextField({ ctx, spec, focus }: { ctx: FieldContext; spec: Extract<Prop
   const own = refId(ctx.target)
   useEffect(() => {
     if (!focus || !focusRequest || focusRequest.refId !== own || !takeFocus(focusRequest)) return
-    input.current?.focus()
-    input.current?.select()
+    focusField(input.current)
   }, [focus, focusRequest, own, takeFocus])
   const change = (next: string) =>
     ctx.run(spec.attr === 'name' ? 'rename' : `change ${spec.label.toLowerCase()}`, (d) => setAttribute(d, ctx.target, spec.attr, next === '' ? null : next), {

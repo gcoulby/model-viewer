@@ -7,6 +7,7 @@ import {
   type ModelSource,
 } from '@/contexts/models-context'
 import { classifierIds, graphIdOf } from '@/lib/ecore/edit/refs'
+import { isInstanceDoc, objectIds } from '@/lib/instance/xmi'
 import { parseModel } from '@/lib/ecore/parse'
 import { newModelText } from '@/lib/workspace/newModel'
 import { loadWorkspace, saveWorkspace, type StoredWorkspace } from '@/lib/workspace/store'
@@ -76,7 +77,15 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
           parseModel(source.text, source.name, -1)
           valid.push(source)
         } catch (error) {
-          errors.push(error instanceof Error ? error.message : String(error))
+          // A file without an EPackage may be an instance of a metamodel rather than a metamodel.
+          let instance = false
+          try {
+            instance = isInstanceDoc(parseXml(source.text))
+          } catch {
+            // Not XML at all: the parser's message says so.
+          }
+          if (instance) valid.push(source)
+          else errors.push(error instanceof Error ? error.message : String(error))
         }
       }
       dispatch({ type: 'add', files: valid })
@@ -102,6 +111,15 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
     return name.toLowerCase()
   }, [dispatch])
 
+  const createFile = useCallback(
+    (base: string, extension: string, text: string) => {
+      const name = freeName(stateRef.current.files, base, extension)
+      dispatch({ type: 'add', files: [{ name, text, savedText: null }] })
+      return name.toLowerCase()
+    },
+    [dispatch],
+  )
+
   const edit = useCallback(
     (label: string, change: (tx: EditTransaction) => void, options?: EditOptions) => {
       const current = stateRef.current
@@ -118,7 +136,7 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
           if (!file) return null
           const doc = parseXml(file.text)
           docs.set(key, doc)
-          idsBefore.set(key, classifierIds(doc, file.index))
+          idsBefore.set(key, isInstanceDoc(doc) ? objectIds(doc, file.index) : classifierIds(doc, file.index))
           return doc
         },
       }
@@ -134,9 +152,10 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
         const doc = docs.get(key)
         const index = files.get(key)?.index
         if (!doc || index === undefined) continue
+        const after = isInstanceDoc(doc) ? objectIds(doc, index) : null
         for (const [el, before] of ids) {
-          const after = doc.documentElement.contains(el) ? graphIdOf(index, el) : null
-          if (after && after !== before) last.set(after, before)
+          const now = !doc.documentElement.contains(el) && el !== doc.documentElement ? null : after ? (after.get(el) ?? null) : graphIdOf(index, el)
+          if (now && now !== before) last.set(now, before)
         }
       }
       const epoch = current.epoch
@@ -207,6 +226,7 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
       links,
       linkExternal,
       createModel,
+      createFile,
       edit,
       undo,
       redo,
@@ -227,6 +247,7 @@ export function ModelsProvider({ children }: { children: ReactNode }) {
       links,
       linkExternal,
       createModel,
+      createFile,
       edit,
       undo,
       redo,

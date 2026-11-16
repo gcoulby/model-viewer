@@ -3,6 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useResizableSize } from '@/hooks/useResizableSize'
 import { PropertiesPanel } from '@/components/edit/PropertiesPanel'
+import { InstancePropertiesPanel } from '@/components/instance/InstancePropertiesPanel'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useEditorMode } from '@/hooks/useEditorMode'
 import { useModels } from '@/hooks/useModels'
@@ -24,9 +25,10 @@ export function DetailPanel() {
       !!drawn?.nodeIds.has(selectedId) ||
       !!drawn?.edges.some((e) => e.id === selectedId))
 
-  // In edit mode the panel edits properties, and stays open while any file is open.
-  if (mode === 'edit') {
+  // In Edit and Instance modes the panel edits properties, and stays open while any file is open.
+  if (mode !== 'view') {
     if (!files.length) return null
+    const panel = mode === 'instance' ? <InstancePropertiesPanel /> : <PropertiesPanel />
     if (isMobile) {
       return (
         <Drawer open modal={false}>
@@ -35,7 +37,7 @@ export function DetailPanel() {
             <DrawerDescription className="sr-only">Properties of the selection</DrawerDescription>
             <ScrollArea className="min-h-0 flex-1">
               <div className="px-4 pt-3.5 pb-6">
-                <PropertiesPanel />
+                {panel}
               </div>
             </ScrollArea>
           </DrawerContent>
@@ -47,7 +49,7 @@ export function DetailPanel() {
         <PanelResizeHandle onPointerDown={startResize} />
         <ScrollArea className="min-h-0 flex-1">
           <div className="px-4 pt-3.5 pb-6">
-            <PropertiesPanel />
+            {panel}
           </div>
         </ScrollArea>
       </aside>

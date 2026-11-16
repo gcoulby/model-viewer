@@ -6,12 +6,14 @@ import { SampleButton } from '@/components/topbar/SampleButton'
 import { Button } from '@/components/ui/button'
 import { useEditorMode } from '@/hooks/useEditorMode'
 import { useModels } from '@/hooks/useModels'
+import { NewInstanceButton } from '@/components/instance/NewInstanceButton'
 import { cn } from '@/lib/utils'
 
 /** The welcome screen. A drop anywhere on the canvas loads, so `dropping` only lights up the target. */
 export function EmptyState({ dropping }: { dropping: boolean }) {
   const { mode } = useEditorMode()
-  const { createModel } = useModels()
+  const { createModel, models } = useModels()
+  if (mode === 'instance' && models.length) return <InstanceEmptyState />
   return (
     <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center p-6">
       <div className="pointer-events-auto w-full max-w-[470px]">
@@ -45,6 +47,29 @@ export function EmptyState({ dropping }: { dropping: boolean }) {
         </div>
         <p className="mt-2 text-[12.5px] text-muted-foreground">
           <strong className="font-medium">Open files</strong> also accepts a <span className="font-mono">.zip</span>.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Instance mode with metamodels open but no instance yet: the one thing to do is start one. */
+function InstanceEmptyState() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center p-6">
+      <div className="pointer-events-auto w-full max-w-[470px]">
+        <h2 className="mb-2 text-[22px] font-semibold tracking-[-.005em]">Make an instance</h2>
+        <p className="mb-4 text-muted-foreground">
+          An instance is a model built from the classes of your metamodel: objects with values, linked by its
+          references. Start from a root class, then add objects inside it from the tree or the Properties panel.
+          It saves as an <span className="font-mono">.xmi</span> file that Eclipse opens too.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <NewInstanceButton variant="default" />
+          <OpenFilesButton variant="outline" />
+        </div>
+        <p className="mt-2 text-[12.5px] text-muted-foreground">
+          <strong className="font-medium">Open files</strong> also opens an existing <span className="font-mono">.xmi</span> instance.
         </p>
       </div>
     </div>

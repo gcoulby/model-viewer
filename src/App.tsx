@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { AppShell } from '@/components/shell/AppShell'
+import { InstancesProvider } from '@/components/providers/InstancesProvider'
 import { ProblemsProvider } from '@/components/providers/ProblemsProvider'
 import { EditTargetProvider } from '@/components/providers/EditTargetProvider'
 import { EditorModeProvider } from '@/components/providers/EditorModeProvider'
@@ -22,6 +23,7 @@ export default function App() {
         <EditorModeProvider>
         <FileColorsProvider>
         <ModelsProvider>
+          <InstancesProvider>
           <ViewOptionsProvider>
             <SelectionProvider>
               <ScopeProvider>
@@ -41,6 +43,7 @@ export default function App() {
               </ScopeProvider>
             </SelectionProvider>
           </ViewOptionsProvider>
+          </InstancesProvider>
         </ModelsProvider>
         </FileColorsProvider>
         </EditorModeProvider>

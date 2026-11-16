@@ -56,7 +56,7 @@ export function indentOf(el: Element): string {
 }
 
 /** Shifts the indentation of every line inside `el` from `from` to `to`, after a move to a new depth. */
-function reindent(el: Element, from: string, to: string) {
+export function reindent(el: Element, from: string, to: string) {
   if (from === to) return
   const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT)
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {

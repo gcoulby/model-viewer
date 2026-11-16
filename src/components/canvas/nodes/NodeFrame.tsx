@@ -22,6 +22,8 @@ export function NodeFrame({ data, selected, dashed = false, stacked = false }: N
   const { node, geometry } = data
   const paint = paintForNode(node, theme === 'dark', hueFor)
   const italic = node.kind === 'class' && node.abstract
+  // UML underlines an object's name, setting it apart from a class.
+  const underline = node.kind === 'class' && !!node.object
 
   return (
     <div
@@ -53,7 +55,7 @@ export function NodeFrame({ data, selected, dashed = false, stacked = false }: N
         {geometry.stereotype && (
           <span className="text-[10.5px] leading-[14px] text-muted-foreground italic">{geometry.stereotype}</span>
         )}
-        <span className={cn('max-w-full truncate text-[13px] leading-[18px] font-semibold', italic && 'italic')}>
+        <span className={cn('max-w-full truncate text-[13px] leading-[18px] font-semibold', italic && 'italic', underline && 'underline underline-offset-2')}>
           {node.name}
         </span>
       </div>

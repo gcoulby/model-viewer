@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 
-/** View shows the model; edit turns the tree and side panel towards changing it. */
-export type EditorMode = 'view' | 'edit'
+/** View shows the model; edit changes the metamodel; instance makes and edits instances of it. */
+export type EditorMode = 'view' | 'edit' | 'instance'
 
 export interface EditorModeContextValue {
   mode: EditorMode
