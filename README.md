@@ -15,7 +15,7 @@ There are two modes, and **E** switches between them. **View** is for exploring 
 Edit mode works like Eclipse's Ecore editor, laid out like the rest of the app:
 
 - **The tree shows everything a file holds**: packages, classes, enums and data types, and inside them attributes, references, operations, parameters, literals, annotations, type parameters and generic types. Right-click a row for **New child**, **New sibling**, **Duplicate**, **Move up/down** and **Delete**, or use the **+** on a row. Drag rows to reorder them or to move them somewhere else in the same file.
-- **The Properties panel edits whatever is selected**, in the tree or on the diagram. Click a box to edit the class, or a line to edit its reference. Types are picked from every open file and Ecore's own types. Setting a reference's opposite pairs both sides.
+- **The Properties panel edits whatever is selected**, in the tree or on the diagram. Click a box to edit the class, or a line to edit its reference. A class lists all of its attributes, references and operations, including those the diagram draws as lines, plus what it inherits. Click one to edit it, or click its type to go there. Types are picked from every open file and Ecore's own types. Setting a reference's opposite pairs both sides.
 - **Renames and moves carry references with them**, across every open file. Deleting a class takes it out of supertype lists and opposites.
 - **The diagram stays put while you work.** New boxes appear beside their package and **Re-layout** tidies up when you ask. Back in view mode, the diagram is laid out afresh.
 - **Problems are checked as you go**, using the rules of Eclipse's Ecore validator: missing or wrong types, references to things that no longer exist, invalid or clashing names, opposites that don't agree, supertype cycles, impossible bounds, missing namespaces. The Problems button in the top bar lists them, and clicking one takes you to it. Rows with a problem are marked in the tree, and the Properties panel shows what's wrong. Saving still works with problems, but tells you about them.
@@ -39,6 +39,7 @@ Edit mode works like Eclipse's Ecore editor, laid out like the rest of the app:
   | Packed grid | A compact index of everything, ignoring links. |
 
   You can also choose which links shape the layout (all, inheritance and containment, or inheritance only), the direction, the spacing, and whether boxes are framed by file or by package.
+- **Lists every feature in its box.** Attributes and references each get their own section, so a class shows everything it holds even when a reference is also drawn as a link. Untick **Reference rows** to draw references only as links, UML style.
 - **Draws links your way.** Lines can be routed, square, curved or straight. With square lines all subtypes of a class share one line to it. Links that don't shape the layout can be hidden until you select a box, which keeps large diagrams clean.
 - **Helps you find your way.** Search the model tree, click any type to centre it, and see its details: supertypes, subtypes, attributes, references, operations, inherited features, and where an enum or data type is used. Show only one file, or hide packages you don't need.
 - **Exports what you see.** Export the whole diagram as SVG or PNG, in the current theme.

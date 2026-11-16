@@ -22,6 +22,8 @@ export type OtherLinks = 'show' | 'selection'
 
 export interface ViewOptions {
   attributes: boolean
+  /** Lists each class's references in its box, as well as drawing them as links. */
+  referenceRows: boolean
   operations: boolean
   inheritance: boolean
   references: boolean

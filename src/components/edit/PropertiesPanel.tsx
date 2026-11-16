@@ -1,4 +1,5 @@
 import { PlusIcon, Trash2Icon, XIcon } from 'lucide-react'
+import { Fragment } from 'react'
 import { Button } from '@/components/ui/button'
 import { useDiagram } from '@/hooks/useDiagram'
 import { useEditTarget } from '@/hooks/useEditTarget'
@@ -11,6 +12,8 @@ import { rowLabel } from '@/lib/ecore/edit/labels'
 import { graphIdOf } from '@/lib/ecore/edit/refs'
 import { refId } from '@/lib/ecore/edit/dom'
 import { modKey } from '@/lib/keys'
+import { CONTENTS, groupSpecs } from '@/lib/ecore/edit/contents'
+import { ContentsSection } from './ContentsSection'
 import { KindBadge } from './KindBadge'
 import { ProblemIcon } from './ProblemIcon'
 import { PropertyField, type FieldContext } from './PropertyFields'
@@ -41,7 +44,10 @@ export function PropertiesPanel() {
   const { name } = rowLabel(element)
   const node = graph?.nodes.get(graphIdOf(file.index, element) ?? '')
   const container = containerName(element)
-  const children = newChildrenOf(element)
+  // The contents lists add their own kinds of child, so "Add inside" offers only the rest.
+  const listed = new Set((CONTENTS[kind] ?? []).flatMap((group) => groupSpecs(kind, group)))
+  const children = newChildrenOf(element).filter((spec) => ![...listed].some((l) => l.tag === spec.tag && l.kind === spec.kind))
+  const contents = <ContentsSection el={element} target={target} file={file} files={files} docs={docs} />
   // The first text field takes focus when something new is made, so its name can be typed straight away.
   const firstText = PROPERTIES[kind].flatMap((section) => section.props).find((p) => p.type === 'text')
 
@@ -87,11 +93,12 @@ export function PropertiesPanel() {
         </ul>
       )}
 
-      {PROPERTIES[kind].map((section) => {
+      {PROPERTIES[kind].map((section, index) => {
         const bools = section.props.filter((p): p is Extract<PropSpec, { type: 'bool' }> => p.type === 'bool')
         const others = section.props.filter((p) => p.type !== 'bool')
         return (
-          <section key={section.title} className="mt-4">
+          <Fragment key={section.title}>
+          <section className="mt-4">
             <h3 className="mb-2 text-[13px] font-semibold">{section.title}</h3>
             <div className="grid gap-3">
               {others.map((spec, i) => (
@@ -111,12 +118,15 @@ export function PropertiesPanel() {
               )}
             </div>
           </section>
+          {/* What an element holds comes straight after what it is, so a class's features are in view. */}
+          {index === 0 && contents}
+          </Fragment>
         )
       })}
 
       {children.length > 0 && (
         <section className="mt-5">
-          <h3 className="mb-2 text-[13px] font-semibold">Add inside</h3>
+          <h3 className="mb-2 text-[13px] font-semibold">{CONTENTS[kind] ? 'Also add' : 'Add inside'}</h3>
           <div className="flex flex-wrap gap-1.5">
             {children.map((spec) => (
               <Button key={`${spec.tag}|${spec.label}`} variant="outline" size="sm" onClick={() => edit.create(target, spec)}>

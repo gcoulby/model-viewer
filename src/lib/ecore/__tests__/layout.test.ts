@@ -8,7 +8,7 @@ import type { LayoutAlgorithm, NodeGeometry, ViewOptions } from '@/types/view'
 import { buildGraph } from '../buildGraph'
 import type { Box } from '../edgeGeometry'
 import { layoutWithElk } from '../elkLayout'
-import { attributeRow, capRows, multiplicitySuffix, operationRow, referenceRow } from '../format'
+import { attributeRow, referenceBoxRow, capRows, multiplicitySuffix, operationRow, referenceRow } from '../format'
 import { layoutWithDagre } from '../layoutGroups'
 import type { LayoutResult } from '../layout'
 import { computeGeometry, createTextMeasurer } from '../measure'
@@ -76,6 +76,7 @@ describe('format', () => {
     expect(attributeRow(loan.attributes[2]!)).toBe('/overdue: EBoolean {readOnly, transient, volatile}')
     const library = find('Library') as ClassGraphNode
     expect(referenceRow(library.references[0]!)).toBe('items: Item [*] {containment}  opposite: library')
+    expect(library.references.map(referenceBoxRow)).toEqual(['items: Item [*]', 'people: Person [*]', 'loans: Loan [*]'])
     expect(operationRow(library.operations[0]!)).toBe('findByTitle(title: EString): Item [*]')
   })
 

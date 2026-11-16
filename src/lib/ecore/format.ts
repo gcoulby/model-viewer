@@ -46,6 +46,11 @@ export function referenceLabel(feature: ParsedReference): string {
   return `${feature.derived ? '/' : ''}${feature.name}${multiplicitySuffix(feature.multiplicity)}${braces(featureModifiers(feature))}`
 }
 
+/** A reference as a row in its class's box, written like an attribute so a box lists every feature. */
+export function referenceBoxRow({ feature, typeName }: ResolvedReference): string {
+  return `${feature.derived ? '/' : ''}${feature.name}: ${typeName}${multiplicitySuffix(feature.multiplicity)}${braces(featureModifiers(feature))}`
+}
+
 export function referenceRow({ feature, typeName, opposite }: ResolvedReference): string {
   let text = `${feature.derived ? '/' : ''}${feature.name}: ${typeName}${multiplicitySuffix(feature.multiplicity)}`
   text += braces([...(feature.containment ? ['containment'] : []), ...featureModifiers(feature)])

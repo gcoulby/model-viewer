@@ -13,6 +13,7 @@ export interface ViewOptionDefinition {
 
 export const VIEW_OPTIONS: ViewOptionDefinition[] = [
   { key: 'attributes', label: 'Attributes', defaultValue: true },
+  { key: 'referenceRows', label: 'Reference rows', defaultValue: true },
   { key: 'operations', label: 'Operations', defaultValue: false },
   { key: 'inheritance', label: 'Inheritance', defaultValue: true },
   { key: 'references', label: 'References', defaultValue: true },

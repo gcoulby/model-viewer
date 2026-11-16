@@ -1,6 +1,6 @@
 import type { DrawnNode, PackageBlockNode } from '@/types/graph'
 import type { NodeGeometry, ViewOptions } from '@/types/view'
-import { attributeRow, capRows, operationRow, stereotypeOf } from './format'
+import { attributeRow, capRows, operationRow, referenceBoxRow, stereotypeOf } from './format'
 
 export const ROW_HEIGHT = 16
 export const MIN_NODE_WIDTH = 132
@@ -75,6 +75,7 @@ function compartmentsOf(node: DrawnNode, options: ViewOptions): string[][] {
   switch (node.kind) {
     case 'class':
       if (options.attributes && node.attributes.length) compartments.push(capRows(node.attributes.map(attributeRow)))
+      if (options.referenceRows && node.references.length) compartments.push(capRows(node.references.map(referenceBoxRow)))
       if (options.operations && node.operations.length) compartments.push(capRows(node.operations.map(operationRow)))
       break
     case 'enum':
