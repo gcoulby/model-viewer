@@ -12,7 +12,7 @@ const onControl = (target: EventTarget | null) =>
   target instanceof HTMLElement && (target.tagName === 'BUTTON' || !!target.closest('[role="menu"], [role="listbox"], [role="dialog"]'))
 
 /**
- * E switches between view and edit. In edit mode, Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z (or Ctrl+Y) undo and redo,
+ * E switches between view and edit, I to instance mode and A to analysis. In edit mode, Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z (or Ctrl+Y) undo and redo,
  * and Cmd/Ctrl+S saves. In a text field, undo stays the field's own. With something targeted, Delete
  * removes it, Enter or F2 renames it, Alt+Up/Down moves it and Cmd/Ctrl+D duplicates it, wherever the
  * focus is, short of a field, button or menu.
@@ -41,7 +41,12 @@ export function useEditorShortcuts() {
         setMode(mode === 'instance' ? 'view' : 'instance')
         return
       }
-      if (mode === 'view') return
+      if (!mod && !event.altKey && key === 'a' && !typingInField(event.target)) {
+        event.preventDefault()
+        setMode(mode === 'analysis' ? 'view' : 'analysis')
+        return
+      }
+      if (mode === 'view' || mode === 'analysis') return
       if (target && !typingInField(event.target) && !onControl(event.target)) {
         const structural = target.path.length > 0
         if (!mod && !event.altKey && (event.key === 'Delete' || event.key === 'Backspace') && structural) {

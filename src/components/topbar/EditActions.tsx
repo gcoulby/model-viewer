@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator'
 import { useModels } from '@/hooks/useModels'
 import { useSaveFiles } from '@/hooks/useSaveFiles'
 import { modKey } from '@/lib/keys'
+import { ConstraintsButton } from '@/components/constraints/ConstraintsManager'
 import { FileMenu } from './FileMenu'
 import { IconAction } from './IconAction'
 import { NewModelButton } from './NewModelButton'
@@ -38,6 +39,7 @@ export function EditActions() {
       >
         <Redo2Icon />
       </IconAction>
+      <ConstraintsButton />
       <ProblemsButton />
       <Separator orientation="vertical" className="mx-1 hidden h-5 md:block" />
       <Button

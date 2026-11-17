@@ -1,3 +1,4 @@
+import { countViolation, valueViolation } from '@/lib/constraints'
 import { pathOf } from '@/lib/ecore/edit/dom'
 import type { Problem, Severity } from '@/lib/ecore/edit/validate'
 import { conforms, type MetaFeature, type Metamodel } from './metamodel'
@@ -84,7 +85,11 @@ export function validateInstances(meta: Metamodel, files: InstanceFile[]): Probl
           for (const value of values) {
             const problem = badValue(feature, value)
             if (problem) report(el, 'error', 'InvalidValue', problem)
+            const broken = !problem && valueViolation(feature.name, value, feature.constraints, feature.valueKind)
+            if (broken) report(el, 'error', 'Constraint', broken)
           }
+          const count = feature.many ? countViolation(feature.name, values.length, feature.constraints) : null
+          if (count) report(el, 'error', 'Constraint', count)
           if (feature.isId && values[0]) {
             const list = ids.get(values[0])
             if (list) list.push(el)
@@ -100,6 +105,8 @@ export function validateInstances(meta: Metamodel, files: InstanceFile[]): Probl
         if (feature.upper > 0 && targets.length > feature.upper) {
           report(el, 'error', 'TooManyValues', `${feature.name} holds at most ${feature.upper}, but has ${targets.length}`)
         }
+        const count = feature.many ? countViolation(feature.name, targets.length, feature.constraints) : null
+        if (count) report(el, 'error', 'Constraint', count)
         if (feature.containment) continue
         for (const token of referenceTokens(el, feature)) {
           if (token.includes('#') && !token.startsWith('#')) {

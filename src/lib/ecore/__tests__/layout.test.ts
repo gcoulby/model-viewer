@@ -81,7 +81,7 @@ describe('format', () => {
   })
 
   it('shows unique and ordered only where they mean something', () => {
-    const base = { kind: 'attribute' as const, name: 'tags', path: '', typeRaw: '', derived: false, transient: false, volatile: false, readOnly: false, unsettable: true, defaultValue: null, isId: false }
+    const base = { kind: 'attribute' as const, name: 'tags', path: '', typeRaw: '', derived: false, transient: false, volatile: false, readOnly: false, unsettable: true, defaultValue: null, isId: false, constraints: {} }
     const row = (upper: number) =>
       attributeRow({ feature: { ...base, multiplicity: { lower: 0, upper }, unique: false, ordered: false }, typeName: 'EString', typeNodeId: null })
     expect(row(-1)).toBe('tags: EString [*] {unsettable, nonunique, unordered}')

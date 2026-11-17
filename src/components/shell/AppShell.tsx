@@ -1,4 +1,6 @@
+import { AnalysisView } from '@/components/analysis/AnalysisView'
 import { PasteDialog } from '@/components/dialogs/PasteDialog'
+import { useEditorMode } from '@/hooks/useEditorMode'
 import { DetailPanel } from '@/components/detail/DetailPanel'
 import { DiagramCanvas } from '@/components/canvas/DiagramCanvas'
 import { ModelSidebar } from '@/components/sidebar/ModelSidebar'
@@ -12,6 +14,7 @@ import { useEscapeToDeselect } from '@/hooks/useEscapeToDeselect'
 export function AppShell() {
   useEscapeToDeselect()
   useEditorShortcuts()
+  const { mode } = useEditorMode()
   const { size: width, startResize } = useResizableSize('ecore-viewer:sidebar-width', 292, 220, 560, 'right')
   return (
     <SidebarProvider
@@ -19,12 +22,16 @@ export function AppShell() {
       style={{ '--sidebar-width': `${width}px` } as React.CSSProperties}
     >
       <TopBar />
-      <div className="relative flex min-h-0 flex-1">
-        <ModelSidebar />
-        <SidebarResizeHandle width={width} onPointerDown={startResize} />
-        <DiagramCanvas />
-        <DetailPanel />
-      </div>
+      {mode === 'analysis' ? (
+        <AnalysisView />
+      ) : (
+        <div className="relative flex min-h-0 flex-1">
+          <ModelSidebar />
+          <SidebarResizeHandle width={width} onPointerDown={startResize} />
+          <DiagramCanvas />
+          <DetailPanel />
+        </div>
+      )}
       <PasteDialog />
     </SidebarProvider>
   )

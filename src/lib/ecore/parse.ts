@@ -1,4 +1,5 @@
 import { dirOf, normalisePath } from './paths'
+import { readDetails } from '@/lib/constraints'
 import type {
   Multiplicity,
   ParsedAttribute,
@@ -176,6 +177,7 @@ function parseClass(
       unique: f.getAttribute('unique') !== 'false',
       ordered: f.getAttribute('ordered') !== 'false',
       defaultValue: f.getAttribute('defaultValueLiteral'),
+      constraints: readDetails(f),
     }
     if (featureType === 'EReference') {
       references.push({

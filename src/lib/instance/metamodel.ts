@@ -1,10 +1,10 @@
+import { parseConstraints, valueKindOf, type Constraints, type ValueKind } from '@/lib/constraints'
 import { buildGraph } from '@/lib/ecore/buildGraph'
 import type { ManualLinks } from '@/lib/ecore/resolve'
 import type { ParsedAttribute, ParsedModel, ParsedPackage, ParsedReference } from '@/types/ecore'
 import type { ClassGraphNode, ModelGraph } from '@/types/graph'
 
-/** How an attribute's values are entered and checked. */
-export type ValueKind = 'string' | 'int' | 'float' | 'boolean' | 'date' | 'enum'
+export type { ValueKind }
 
 export interface MetaFeature {
   name: string
@@ -31,6 +31,8 @@ export interface MetaFeature {
   /** The class that declares the feature, which may be a supertype. */
   declaredIn: string
   parsed: ParsedAttribute | ParsedReference
+  /** Ecore Studio constraints from the metamodel, which the generator follows and validation checks. */
+  constraints: Constraints
 }
 
 export interface MetaClass {
@@ -59,20 +61,8 @@ export interface Metamodel {
   roots: MetaClass[]
 }
 
-const INT_TYPES = new Set(['EInt', 'ELong', 'EShort', 'EByte', 'EBigInteger', 'EIntegerObject', 'ELongObject', 'EShortObject', 'EByteObject'])
-const FLOAT_TYPES = new Set(['EDouble', 'EFloat', 'EBigDecimal', 'EDoubleObject', 'EFloatObject'])
-const BOOLEAN_TYPES = new Set(['EBoolean', 'EBooleanObject'])
-
 export const qname = (nsURI: string, name: string) => `${nsURI}#${name}`
 
-function valueKindOf(typeName: string, isEnum: boolean): ValueKind {
-  if (isEnum) return 'enum'
-  if (INT_TYPES.has(typeName)) return 'int'
-  if (FLOAT_TYPES.has(typeName)) return 'float'
-  if (BOOLEAN_TYPES.has(typeName)) return 'boolean'
-  if (typeName === 'EDate') return 'date'
-  return 'string'
-}
 
 export function buildMetamodel(models: ParsedModel[], links?: ManualLinks): Metamodel {
   const graph = buildGraph(models, links)
@@ -101,6 +91,7 @@ export function buildMetamodel(models: ParsedModel[], links?: ManualLinks): Meta
         container: false,
         declaredIn: node.id,
         parsed: feature,
+        constraints: {},
       }
     }),
     ...node.references.map(({ feature, typeName, targetId, opposite }): MetaFeature => ({
@@ -121,8 +112,9 @@ export function buildMetamodel(models: ParsedModel[], links?: ManualLinks): Meta
       container: !!opposite?.containment,
       declaredIn: node.id,
       parsed: feature,
+      constraints: {},
     })),
-  ]
+  ].map((f) => ({ ...f, constraints: parseConstraints(f.parsed.constraints ?? {}, f) }))
 
   // EMF's eAllStructuralFeatures: each supertype's features (depth first, once each), then the class's own.
   const allFeatures = (node: ClassGraphNode, seen = new Set<string>()): MetaFeature[] => {

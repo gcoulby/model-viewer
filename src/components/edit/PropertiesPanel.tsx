@@ -13,6 +13,7 @@ import { graphIdOf } from '@/lib/ecore/edit/refs'
 import { refId } from '@/lib/ecore/edit/dom'
 import { modKey } from '@/lib/keys'
 import { CONTENTS, groupSpecs } from '@/lib/ecore/edit/contents'
+import { ConstraintsSection } from '@/components/constraints/ConstraintsSection'
 import { ContentsSection } from './ContentsSection'
 import { KindBadge } from './KindBadge'
 import { ProblemIcon } from './ProblemIcon'
@@ -123,6 +124,10 @@ export function PropertiesPanel() {
           </Fragment>
         )
       })}
+
+      {(kind === 'EAttribute' || kind === 'EReference') && (
+        <ConstraintsSection el={element} path={target.path} file={file} files={files} docs={docs} />
+      )}
 
       {children.length > 0 && (
         <section className="mt-5">

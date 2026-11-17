@@ -1,4 +1,5 @@
-import { BoxIcon, ChevronDownIcon } from 'lucide-react'
+import { BoxIcon, ChevronDownIcon, SparklesIcon } from 'lucide-react'
+import { useState } from 'react'
 import { ClassifierIcon } from '@/components/sidebar/ClassifierIcon'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +20,7 @@ import { useModels } from '@/hooks/useModels'
 import type { MetaClass } from '@/lib/instance/metamodel'
 import { newInstanceText } from '@/lib/instance/xmi'
 import { focusGoesToField, restoreFocusUnlessTyping } from '@/lib/keys'
+import { GenerateDialog } from './GenerateDialog'
 
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
@@ -76,6 +78,7 @@ export function NewInstanceButton({ variant = 'outline' }: { variant?: 'outline'
   const { createFile } = useModels()
   const { setTarget } = useEditTarget()
   const any = !!meta && [...meta.classes.values()].some((c) => !c.abstract)
+  const [generating, setGenerating] = useState(false)
 
   const create = (cls: MetaClass) => {
     focusGoesToField()
@@ -85,20 +88,29 @@ export function NewInstanceButton({ variant = 'outline' }: { variant?: 'outline'
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button variant={variant} disabled={!any} title={any ? 'Start a new instance file' : 'Open a metamodel first'} />}
-      >
-        <BoxIcon />
-        New instance
-        <ChevronDownIcon className="opacity-60" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72" finalFocus={restoreFocusUnlessTyping}>
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="font-normal text-muted-foreground">A new .xmi file, starting from…</DropdownMenuLabel>
-        </DropdownMenuGroup>
-        <ClassMenuItems onPick={create} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant={variant} disabled={!any} title={any ? 'Start a new instance file' : 'Open a metamodel first'} />}
+        >
+          <BoxIcon />
+          New instance
+          <ChevronDownIcon className="opacity-60" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-72" finalFocus={restoreFocusUnlessTyping}>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="font-normal text-muted-foreground">A new .xmi file, starting from…</DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <ClassMenuItems onPick={create} />
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setGenerating(true)}>
+            <SparklesIcon />
+            Generate instance…
+            <span className="ml-auto pl-3 text-xs text-muted-foreground">filled in</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <GenerateDialog open={generating} onOpenChange={setGenerating} />
+    </>
   )
 }

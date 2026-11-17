@@ -56,6 +56,22 @@ Instance mode is the counterpart to Eclipse's **Create Dynamic Instance** and re
 - **Problems are checked as you go**: required values left empty, too many values, values that don't fit their type, references to missing or wrong-typed objects, duplicate IDs, and classes that aren't in the metamodel.
 - **Instances save as EMF XMI**, so Eclipse opens them. References between objects are written as paths such as `//@items.0` (`/0/@items.0` with several roots), and kept right when objects are moved or deleted. For now an instance lives in one file.
 
+## Constraints
+
+Constraints add rules a metamodel's multiplicities can't express: a range for a number or date, how many values a list needs, the values allowed, or a pattern a string must match. Set them in the **Constraints** section of an attribute or reference in Edit mode, or review them all with the **Constraints** button in Edit and Instance modes.
+
+- They're saved in the `.ecore` as an annotation on the feature (`source="http://ecore-studio/constraints"`), so they travel with the file. Eclipse ignores annotations it doesn't know.
+- Problems checks instances against them, and the metamodel's Problems reports a constraint that doesn't make sense, such as a minimum above its maximum or a broken pattern.
+- **Generate instance…** follows them.
+
+## Generating instances
+
+**New instance ▸ Generate instance…** makes a filled-in instance file instead of an empty one: pick a root class, a size and whether optional features are filled too. It creates contained objects, values that fit their types and constraints, and references, making an object when a required reference has nothing to point at. The same seed always gives the same model.
+
+## Analysis
+
+Analysis mode (**A**) measures the open metamodels: counts, inheritance depth, features per class, containment roots and depth, and a sortable table of every class with its coupling (fan-in and fan-out) and subclasses. Its findings flag classes that can't be instantiated (required containment that never ends), classes no root can contain, abstract classes with no subclasses, unused enums and data types, isolated, empty, large or deeply inherited classes, naming, and validation problems. Click any class to open it in Edit mode. **Report** downloads it all as an HTML page or Markdown.
+
 ## Running it locally
 
 You need [Node.js](https://nodejs.org/) 24 and [pnpm](https://pnpm.io/).

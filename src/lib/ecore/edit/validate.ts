@@ -1,3 +1,4 @@
+import { constraintsErrors, readDetails, valueKindOf, type ConstraintTarget } from '@/lib/constraints'
 import { ECORE_NAMESPACE } from '@/data/ecoreNamespace'
 import { ECORE_CLASSES, ECORE_DATA_TYPES } from './builtins'
 import { pathOf, type ElementRef } from './dom'
@@ -138,6 +139,18 @@ export function validate(files: RefFile[], docs: ReadonlyMap<string, Document>):
       if (lower < 0) report(file, el, 'error', 'ValidLowerBound', "The lower bound can't be negative")
       if (upper === 0) report(file, el, 'error', 'ValidUpperBound', "The upper bound can't be 0")
       else if (upper > 0 && lower > upper) report(file, el, 'error', 'ConsistentBounds', `The lower bound (${lower}) is more than the upper bound (${upper})`)
+      if (kind === 'EAttribute' || kind === 'EReference') {
+        const details = readDetails(el)
+        if (Object.keys(details).length) {
+          const type = token ? resolve(file, token) : null
+          const target: ConstraintTarget = {
+            kind: kind === 'EAttribute' ? 'attribute' : 'reference',
+            many: upper < 0 || upper > 1,
+            valueKind: valueKindOf(token ? tokenName(token) : '', type?.status === 'element' && type.kind === 'EEnum'),
+          }
+          for (const message of constraintsErrors(details, target)) report(file, el, 'error', 'Constraint', message)
+        }
+      }
     }
 
     // Classes.

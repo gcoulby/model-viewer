@@ -1,3 +1,4 @@
+import type { ConstraintDetails } from '@/lib/constraints'
 
 /** upper === -1 means unbounded. */
 export interface Multiplicity {
@@ -19,6 +20,8 @@ interface ParsedFeatureBase {
   unique: boolean
   ordered: boolean
   defaultValue: string | null
+  /** Ecore Studio's constraints on the feature's values, from its constraints annotation. */
+  constraints: ConstraintDetails
 }
 
 export interface ParsedAttribute extends ParsedFeatureBase {

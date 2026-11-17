@@ -1,4 +1,4 @@
-import { BoxesIcon, EyeIcon, PencilIcon } from 'lucide-react'
+import { BoxesIcon, ChartColumnIcon, EyeIcon, PencilIcon } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { EditorMode } from '@/contexts/editor-mode-context'
 import { useEditorMode } from '@/hooks/useEditorMode'
@@ -8,6 +8,7 @@ const MODES: { value: EditorMode; label: string; icon: typeof EyeIcon; title: st
   { value: 'view', label: 'View', icon: EyeIcon, title: 'Explore the diagram (E)' },
   { value: 'edit', label: 'Edit', icon: PencilIcon, title: 'Change the metamodel (E)' },
   { value: 'instance', label: 'Instance', icon: BoxesIcon, title: 'Make and edit instances of the metamodel (I)' },
+  { value: 'analysis', label: 'Analysis', icon: ChartColumnIcon, title: 'Measure the metamodel and report on it (A)' },
 ]
 
 export function ModeSwitch() {
@@ -30,6 +31,7 @@ export function ModeSwitch() {
           key={value}
           value={value}
           title={title}
+          aria-label={label}
           className={cn(
             'gap-1.5 px-2.5 text-xs text-muted-foreground aria-pressed:text-foreground',
             // Editing is the mode that changes files, so it is marked more strongly than viewing.
@@ -37,7 +39,8 @@ export function ModeSwitch() {
           )}
         >
           <Icon className="size-3.5" />
-          {label}
+          {/* Four modes don't fit a phone's top bar with labels, so narrow screens show the icons. */}
+          <span className="hidden sm:inline">{label}</span>
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
